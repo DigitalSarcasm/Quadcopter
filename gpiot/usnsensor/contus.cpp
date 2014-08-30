@@ -1,6 +1,6 @@
 #include <iostream>
 #include <wiringPi.h>
-#include <ctime>
+#include <sys/time.h>
 #include <unistd.h>
 
 using namespace std;
@@ -9,10 +9,12 @@ const int AVGRATE = 3; //how much values to calculate average
 
 int main (int argc, char** argv){
 
-	clock_t start = 0, stop = 0;
+	timeval start, stop, res;
+	long start2 = 0, stop2 = 0;
 	double elapsed;
 	double distance = 0;
 	double average = 0;
+	double average2 = 0;
 
 	wiringPiSetup();
 
@@ -25,7 +27,7 @@ int main (int argc, char** argv){
 	cout << "starting measurement \n";
 
 	while(true){
-		average = 0;
+		average = average2 = 0;
 		for(int i=0; i<AVGRATE; i++){
 
 			digitalWrite(4, HIGH);
@@ -33,12 +35,13 @@ int main (int argc, char** argv){
 			digitalWrite(4, LOW);
 
 			while(digitalRead(5) == LOW)
-				start = clock();
+				gettimeofday(&start, NULL);			//clock is processor dependent
 
 			while(digitalRead(5) == HIGH)
-				stop = clock();
+				gettimeofday(&stop, NULL);
 
-			elapsed = ((double)(stop - start))/CLOCKS_PER_SEC;
+			timersub(&stop, &start, &res);
+			elapsed = ((double)(res.tv_usec))/1000000;
 
 
 			distance = elapsed * (340 * 100); //distance = time * speed of sound in cm (340m/s)
@@ -47,9 +50,31 @@ int main (int argc, char** argv){
 			average += distance;
 		}
 
-		average /= AVGRATE;
+		for(int i=0; i<AVGRATE; i++){
 
-		cout << "distance: " << average << "cm \n";
+			digitalWrite(4, HIGH);
+			delayMicroseconds(10);				//minimum 10 microseconds to send pulse
+			digitalWrite(4, LOW);
+
+			while(digitalRead(5) == LOW)
+				start2 = micros();
+
+			while(digitalRead(5) == HIGH)
+				stop2 = micros();
+
+			elapsed = (double)(stop2 - start2) / 1000000;
+
+
+			distance = elapsed * (340 * 100); //distance = time * speed of sound in cm (340m/s)
+			distance /= 2;	//the time was the time it took to for the pulse to hit object and come back, thus 2 times the time. so distance is divided by 2
+
+			average2 += distance;
+		}
+
+		average /= AVGRATE;
+		average2 /= AVGRATE;
+
+		cout << "distance with clock: " << average << "cm \tdistance with delay: " << average2 << "cm \n";
 		usleep(1000000);	//sleep for 1 second
 	}
 
