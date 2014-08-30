@@ -5,11 +5,14 @@
 
 using namespace std;
 
+const int AVGRATE = 3; //how much values to calculate average
+
 int main (int argc, char** argv){
 
 	clock_t start = 0, stop = 0;
 	double elapsed;
 	double distance = 0;
+	double average = 0;
 
 	wiringPiSetup();
 
@@ -22,24 +25,32 @@ int main (int argc, char** argv){
 	cout << "starting measurement \n";
 
 	while(true){
-	digitalWrite(4, HIGH);
-	usleep(10);				//minimum 10 microseconds to send pulse
-	digitalWrite(4, LOW);
+		average = 0;
+		for(int i=0; i<AVGRATE; i++){
 
-	while(digitalRead(5) == LOW)
-		start = clock();
+			digitalWrite(4, HIGH);
+			usleep(10);				//minimum 10 microseconds to send pulse
+			digitalWrite(4, LOW);
 
-	while(digitalRead(5) == HIGH)
-		stop = clock();
+			while(digitalRead(5) == LOW)
+				start = clock();
 
-	elapsed = ((double)(stop - start))/CLOCKS_PER_SEC;
+			while(digitalRead(5) == HIGH)
+				stop = clock();
+
+			elapsed = ((double)(stop - start))/CLOCKS_PER_SEC;
 
 
-	distance = elapsed * (340 * 100); //distance = time * speed of sound in cm (340m/s)
-	distance /= 2;	//the time was the time it took to for the pulse to hit object and come back, thus 2 times the time. so distance is divided by 2
+			distance = elapsed * (340 * 100); //distance = time * speed of sound in cm (340m/s)
+			distance /= 2;	//the time was the time it took to for the pulse to hit object and come back, thus 2 times the time. so distance is divided by 2
 
-	cout << "distance: " << distance << "cm \n";
-	usleep(500000);
+			average += distance;
+		}
+
+		average /= AVGRATE;
+
+		cout << "distance: " << average << "cm \n";
+		usleep(1000000);	//sleep for 1 second
 	}
 
 }
