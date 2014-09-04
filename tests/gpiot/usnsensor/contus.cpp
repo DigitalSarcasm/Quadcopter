@@ -6,6 +6,7 @@
 using namespace std;
 
 const int AVGRATE = 3; //how much values to calculate average
+timeval TIMEMOUT = {};
 
 int main (int argc, char** argv){
 
@@ -35,7 +36,7 @@ int main (int argc, char** argv){
 			digitalWrite(4, LOW);
 
 			while(digitalRead(5) == LOW)
-				gettimeofday(&start, NULL);			//clock is processor dependent
+				gettimeofday(&start, NULL);			//clock is processor dependent so we use time of day
 
 			while(digitalRead(5) == HIGH)
 				gettimeofday(&stop, NULL);
