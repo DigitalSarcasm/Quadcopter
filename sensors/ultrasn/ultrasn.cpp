@@ -1,6 +1,16 @@
+#ifndef _ULTRASN_CPP
+#define _ULTRASN_CPP
+
 #include "ultrasn.h"
 
-void setPin(int trig = TRIGGER, int echo = ECHO){
+timeval TIMEOUT = {0, 1400}; //default timeout is 0.014seconds because the sensor maxs out at 5 meters
+int TIMEOUTLIMIT = 3;
+int AVGRATE = 3;
+int TRIGGER = 4; //default pin is pin16
+int ECHO = 5; //default pin is pin18
+
+
+void setPin(int trig, int echo){
 	TRIGGER = trig;	//mirror if the defaults haven't changed
 	ECHO = echo;
 	pinMode(TRIGGER, OUTPUT);
@@ -20,7 +30,7 @@ void setPin(int trig = TRIGGER, int echo = ECHO){
  * returns distance or -1 if the time out limit has been reached
  *
  */
-double getDistance(int avgRate = AVGRATE, timeval& timeout = TIMEOUT, int timeOutLimit = TIMEOUTLIMIT){
+double getDistance(int avgRate, timeval& timeout, int timeOutLimit){
 
 	timeval start, stop;
 	timeval timerStart, timerStop, result;
@@ -28,11 +38,11 @@ double getDistance(int avgRate = AVGRATE, timeval& timeout = TIMEOUT, int timeOu
 	double sumDistance = 0;
 	int timeOutCount = 0;	//number of times the pulse can timeout
 
-	//let module stabilize FOR 15 15 millisec
+	//let module stabilize FOR 15 millisec
 	digitalWrite(TRIGGER, LOW);
 	usleep(15000);
 
-	//gets the average of diatances
+	//gets the average of distances
 	for(int i=0; i<avgRate && timeOutCount<timeOutLimit; i++){
 		bool timedOut = false;
 
@@ -44,12 +54,12 @@ double getDistance(int avgRate = AVGRATE, timeval& timeout = TIMEOUT, int timeOu
 		gettimeofday(&timerStart, NULL); //start timeout timer
 
 		//check if the signal changes or
-		do(){
+		do{
 			gettimeofday(&timerStop, NULL);
 			timersub(&timerStop, &timerStart, &result);
 			timedOut = !(timercmp(&result, &timeout, <=)); //if (a<=b) does not equal false (man page it, its confusing to read)
 
-			gettimeofDay(&start, NULL);			//get time that the echo pins turns to 1
+			gettimeofday(&start, NULL);			//get time that the echo pins turns to 1
 		}while( (digitalRead(ECHO) == LOW) && !timedOut ); //while echo is low and the loop hasn't timed out
 
 		//if not timed out, get travelTime reading
@@ -75,3 +85,5 @@ double getDistance(int avgRate = AVGRATE, timeval& timeout = TIMEOUT, int timeOu
 	return sumDistance/avgRate;
 
 }
+
+#endif // _ULTRASN_CPP
