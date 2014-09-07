@@ -8,3 +8,6 @@ contus: contus.cpp
 	
 time: time.cpp
 	g++ time.cpp -o time -Wall -lwiringPi
+	
+clean:
+	rm contus ultrasn time

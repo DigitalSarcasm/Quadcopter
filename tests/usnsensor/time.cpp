@@ -4,8 +4,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-using namespacels
- std;
+using namespace std;
 
 int main(int argc, char** argv){
 
