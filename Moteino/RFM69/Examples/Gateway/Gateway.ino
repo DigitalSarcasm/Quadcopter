@@ -77,7 +77,7 @@ void loop() {
       radio.encrypt(ENCRYPTKEY);
     if (input == 'e') //e=disable encryption
       radio.encrypt(null);
-    if (input == 'p')
+    if (input == 'p') //p=toggle promiscuity
     {
       promiscuousMode = !promiscuousMode;
       radio.promiscuous(promiscuousMode);
