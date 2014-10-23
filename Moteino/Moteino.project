@@ -149,8 +149,16 @@
   <Dependencies Name="Debug"/>
   <Dependencies Name="Release"/>
   <VirtualDirectory Name="Tests">
-    <VirtualDirectory Name="RSSI checker">
-      <File Name="Tests/RSSI checker/rssiCheck.ino"/>
+    <VirtualDirectory Name="simplerxtx">
+      <VirtualDirectory Name="simplerec">
+        <File Name="Tests/simplerxtx/simplerec/simplerec.ino"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="simplesend">
+        <File Name="Tests/simplerxtx/simplesend/simplesend.ino"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+    <VirtualDirectory Name="rssiCheck">
+      <File Name="Tests/rssiCheck/rssiCheck.ino"/>
     </VirtualDirectory>
   </VirtualDirectory>
 </CodeLite_Project>
