@@ -149,12 +149,26 @@
   <Dependencies Name="Debug"/>
   <Dependencies Name="Release"/>
   <VirtualDirectory Name="Tests">
+    <VirtualDirectory Name="simpleServerClient">
+      <VirtualDirectory Name="simpleClient">
+        <File Name="Tests/simpleServerClient/simpleClient/simpleClient.ino"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="simpleServer">
+        <File Name="Tests/simpleServerClient/simpleServer/simpleServer.ino"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
     <VirtualDirectory Name="simplerxtx">
       <VirtualDirectory Name="simplerec">
         <File Name="Tests/simplerxtx/simplerec/simplerec.ino"/>
       </VirtualDirectory>
       <VirtualDirectory Name="simplesend">
         <File Name="Tests/simplerxtx/simplesend/simplesend.ino"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="stlrec">
+        <File Name="Tests/simplerxtx/stlrec/stlrec.ino"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="stlsend">
+        <File Name="Tests/simplerxtx/stlsend/stlsend.ino"/>
       </VirtualDirectory>
     </VirtualDirectory>
     <VirtualDirectory Name="rssiCheck">

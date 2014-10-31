@@ -1,23 +1,25 @@
 #include <RFM69.h>
 #include <SPI.h>
 #include <SPIFlash.h>
+#include <StandardCplusplus.h>
+#include <String>
 
 #define NODEID 1
 #define NETID 100
 #define FREQ RF69_915MHZ
 #define SERIALBAUD 115200
-#define FLASH_LED 8
 #define ANT_LED 9
+#define FLASH_LED 8
+#define KEY "ABCDEFGHIJKLMNOP"
 
 RFM69 radio;
 SPIFlash flash(FLASH_LED, 0xEF30);
 
 void setup(){
 	Serial.begin(SERIALBAUD);
-	delay(10);
 	
 	radio.initialize(FREQ, NODEID, NETID);
-	radio.encrypt(0);
+	radio.encrypt(KEY);
 	
 	if(flash.initialize())
 		Serial.println("Flash initialization: OK");
@@ -26,20 +28,18 @@ void setup(){
 }
 
 void loop(){
+	std::string payload;
+	
 	if(radio.receiveDone()){
-		Serial.print("Message received: ");
 		
-		Serial.print("FROM: "); Serial.println(radio.SENDERID, DEC);	
-		Serial.print("  Datalen: "); Serial.print(radio.DATALEN, DEC);
-			Serial.print("  ");
-		for(int i=0; i<radio.DATALEN; i++)
-			Serial.print((char)radio.DATA[i]);
-		Serial.println();
+		payload = std::string((char*)radio.DATA);	//Since we know that the payload is a char array
 		
-		if(radio.ACKRequested())	//WARNING, AVOID USING RFM69 FUNCTIONS BEFORE EXTRACTING DATA, WILL CHANGE VARIABLES INCLUDING DATA AND DATALEN
+		Serial.print("Message Received. Payload length: "); Serial.print(radio.PAYLOADLEN, DEC); Serial.println();
+		Serial.print("Payload: "); Serial.println(payload.c_str());
+		
+		if(radio.ACKRequested())
 			radio.sendACK();
-		
-		blink(ANT_LED, 5);
+		blink(ANT_LED, 3);
 	}
 }
 
