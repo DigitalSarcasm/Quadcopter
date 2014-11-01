@@ -11,7 +11,7 @@
 #include <StandardCplusplus.h>
 #include <String>
 
-#define NODEID 0
+#define NODEID 1
 #define NETID 100
 byte CLIENTID = 0;    //avoid using #define for values that will be changed
 #define FREQ RF69_915MHZ
@@ -20,7 +20,7 @@ byte CLIENTID = 0;    //avoid using #define for values that will be changed
 #define FLASH_LED 8
 #define KEY "ABCDEFGHIJKLMNOP"
 
-#define HANDSHAKINGATTEMPTS 200
+#define HANDSHAKINGATTEMPTS 30
 #define HANDSHAKINGWAIT 100
 
 RFM69 radio;
@@ -41,7 +41,7 @@ void setup()
 	else
 		Serial.println("Flash initialization: FAILURE");
 
-	radio.promiscuous(true);	//sets to promiscuous for hanshaking
+	radio.promiscuous(true);	//sets to promiscuous for handshaking
 
 	milstart = millis();
 	//starting handshaking
@@ -59,7 +59,7 @@ void setup()
 			}
 		}
 
-		if((millis() - milstart)/HANDSHAKINGWAIT > attempts) {
+		if((millis() - milstart)/HANDSHAKINGWAIT > attempts) {	//checks if handshaking phase is completed
 			attempts++;
 			Serial.print("Attempt: ");
 			Serial.println(attempts, DEC);

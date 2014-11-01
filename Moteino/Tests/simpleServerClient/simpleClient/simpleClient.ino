@@ -1,7 +1,7 @@
 /*
  * Simple Client. Takes command from Serial and sends to server. Takes command from server and send it to serial.
  * Should handshake with server during setup phase to have server address (sends out its id and asks for server's ID)
- * 
+ *
  */
 
 #include <RFM69.h>
@@ -27,10 +27,13 @@ byte SERVERID = -1;
 RFM69 radio;
 SPIFlash flash(FLASH_LED, 0xEF30);
 
-void setup(){
-        int attempts = 0;
+void setup()
+{
+	unsigned long milstart;
+	int attempts = 0;
+	int curPeriod = 0;
 	Serial.begin(SERIALBAUD);
-	
+
 	radio.initialize(FREQ, CLIENTID, NETID);
 	radio.encrypt(KEY);
 
@@ -38,30 +41,45 @@ void setup(){
 		Serial.println("Flash initialization: OK");
 	else
 		Serial.println("Flash initialization: FAILURE");
-	
-	delay(500);
+
+        //promiscuity is not needed
+	//radio.promiscuous(true);	//turn on promiscuity because we do not know
+	delay(200);                     //have to sync up the client or server or the client might finish
+	milstart = millis();              //handshaking before server starts up
+
 	//starts handshaking phase
 	//tries to handshake HANDSHAKINGATTEMPTS times
-        while(attempts<HANDSHAKINGATTEMPTS){
-        	if(radio.sendWithRetry(0,"",0, 1, HANDSHAKINGWAIT)){
-        		SERVERID = radio.SENDERID;
-        		Serial.print("Handshaking successful. Server Id: "); Serial.println(SERVERID, DEC);
-                        attempts = HANDSHAKINGATTEMPTS;
-        	}
-                attempts++;
-        }
-		
+	while(attempts<HANDSHAKINGATTEMPTS) {//as we are trying to handshake with the server, we don't know its address so we send to 0 (server request address)
+		//since we don't know the server's id we must handshake manually
+		//but sine ACKReceived needs to know who to accept the ack from, we can't use
+		//sendWithretry as it needs to know who to take ACK from (ACKReceived)
+		radio.send(0, "", 0, true);	//sends without retry and waits for ACK manually
+
+		while((millis()-milstart) < HANDSHAKINGWAIT) {	//waits for ACK
+			if(radio.receiveDone()) {
+				if(radio.ACK_RECEIVED) {
+					SERVERID = radio.SENDERID;		//Get server's address
+					Serial.print("Handshaking successful. Server Id: ");	//servers address
+					Serial.println(SERVERID, DEC);
+					attempts = HANDSHAKINGATTEMPTS;
+				}
+			}
+		}
+		attempts++;
+	}
+	//radio.promiscuous(false);
 }
 
 
-void loop(){
-	
+void loop()
+{
+
 }
 
 void blink(byte PIN, int DELAY_MS)
 {
-  pinMode(PIN, OUTPUT);
-  digitalWrite(PIN,HIGH);
-  delay(DELAY_MS);
-  digitalWrite(PIN,LOW);
+	pinMode(PIN, OUTPUT);
+	digitalWrite(PIN,HIGH);
+	delay(DELAY_MS);
+	digitalWrite(PIN,LOW);
 }
