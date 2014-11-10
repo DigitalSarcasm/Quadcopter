@@ -11,7 +11,7 @@
 #include <String>
 
 #define CLIENTID 2
-byte SERVERID = -1;
+byte SERVERID = 0;
 #define NETID 100
 #define FREQ RF69_915MHZ
 #define SERIALBAUD 115200
@@ -73,6 +73,27 @@ void setup()
 
 void loop()
 {
+	bool reqack = false;
+	
+	//Checks for handshake
+	if(SERVERID == 0) //handshake has failed
+		return;
+	
+	//requests transmission
+	
+	byte buf[62];
+	byte packettype = B01000000; //request transmission (2)
+	buf[0] = packettype;
+	int psize = sizeof(buf);
+	
+	while(1){
+		if(radio.canSend())
+			radio.send(SERVERID, buf, psize);
+	}
+	
+	//sends large data block bigger than 61 bytes
+	
+	
 
 }
 

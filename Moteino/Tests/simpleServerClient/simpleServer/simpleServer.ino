@@ -73,7 +73,22 @@ void setup()
 
 void loop()
 {
-
+	bool reqrec = false;
+	//checks for handshake
+	if(CLIENTID == 0)
+		return;
+	
+	//waits for request
+	while(!reqrec){
+		if(radio.receiveDone()){
+			byte ptype = getPacketType(radio.DATA[0]);
+			
+		}
+	}
+	
+	// acknowldges requests and receives data
+	
+	//print our how much data was received
 
 }
 
@@ -83,4 +98,13 @@ void blink(byte PIN, int DELAY_MS)
 	digitalWrite(PIN,HIGH);
 	delay(DELAY_MS);
 	digitalWrite(PIN,LOW);
+}
+
+byte getPacketType(byte ptype){
+	byte typeMask = B11100000;
+	byte type = ptype & typeMask;
+	
+	type = type << 3;		
+	
+	return type;
 }
