@@ -1,0 +1,63 @@
+
+  		  html { height: 100% }
+  body { height: 100%; margin: 0; padding: 0 }
+ 	font-size: 11px;font-family: 'lucida grande',tahoma,verdana,arial,sans-serif;
+		padding-bottom:20px; }
+    .metaphore{height:100px; width:100%}
+	
+  .icon{height:60px;width:55px; float: left}
+  
+  .icon:hover {cursor: pointer; cursor: hand;}
+	
+	.overlay{
+	background: transparent url(../img/overlay.png) repeat top left;
+	position: fixed;
+	bottom:0px;
+	top:0px;
+	left:0px;
+	right:0px;
+	}
+	
+		
+		#header{
+		width:100%;
+		padding-left: 10px;
+		padding-top:3px; 
+		height: 30px;
+		position: fixed;
+		background-color: #222;
+		left: 0px;
+		top:0px;
+		color: #FFF5EE;
+		clear:both;		
+	}
+
+
+  #map-canvas { height: 500px; }
+  
+  	.box{
+		position: fixed;
+        top: -1000px;
+        left: 30%;
+        right: 30%;
+        background-color: #fff;
+        color: #7F7F7F;
+        padding: 20px;
+        border: 2px solid #263849;
+        z-index: 100;
+	}
+	
+ .map2{position: fixed;
+        top: -1000px;
+        left: 30%;
+        right: 30%;}
+        
+.map3{position: fixed;
+        top: -1000px;
+        left: 30%;
+        right: 30%;}
+        
+.map4{position: fixed;
+        top: -1000px;
+        left: 30%;
+        right: 30%;}
