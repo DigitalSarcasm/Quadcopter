@@ -70,12 +70,25 @@
             
            }
            
-    function addQuad(){
-    	
+    function addQuad(num){
+    		
+	$('#map-canvas').animate({'left':'2500px'},300,function(){
+            	
+            	// $('.notify-status').css('background-color', 'white');
+           });
+		
+			
     }
     
-    function switchQuad(){
-    	
+    function switchQuad(num){
+
+       
+			$('#map-canvas').animate({'left':'0px'},300,function(){
+            	
+            	// $('.notify-status').css('background-color', 'white');
+           });
+				
+				
     }
     
     function removeQuad(num){
@@ -85,7 +98,8 @@
 
 <!-- <div class="overlay" id="overlay2"  style=""></div> -->
 	
-		<div class="methaphore" style="height:60px;width: 100%;margin-top: 25px">
+		<div class="methaphore" style="height:60px;width: 100%;margin-top: 25px;margin-bottom: 5px">
+	
 		<div class="icon">
 			<a onclick=""> <img src="includes/img/battery.png" width="60px" height="60px" /></a>
 		</div>
@@ -94,32 +108,20 @@
 			<a onclick=""> <img src="includes/img/config.png" width="60px" height="60px" /></a>
 		</div>
 		
-		
+			<div id="divider" style="margin-bottom: 0px">
+	<img src="includes/img/divider.jpg" />
+</div>
 		
 	</div>
 	
-	<div id="map1"></div>
+	<div style="margin-top: 5px" id="map1"></div>
 	<div  id="map-canvas" >
-	</div>
-
-	
-	<div class="methaphore" style="height:100px;width: 100%">
-		
-		<div class="icon">
-			<a onclick="addQuad()"> <img src="includes/img/addQuad.png" width="60px" height="60px" /></a>
-		</div>
-		
-		<div class="icon">
-			<a onclick="gstation()"> <img src="includes/img/gstation.png" width="60px" height="60px" /></a>
-		</div>
-		
-		
-		
-		<div class="icon" style="float:right">
-			<a onclick=""> <img alt="manual controle" src="includes/img/manual.png" width="60px" height="60px" /></a>
-		</div>
 		
 	</div>
+	<button onclick="switchQuad('1')" value="1" style="visibility: visible" id="fade_map1">Map1</button>
+	<button onclick="switchQuad('2')" style="visibility: hidden" value="2" style="visibility: visible" id="fade_map1">Map2</button>
+	<button onclick="switchQuad('3')" style="visibility: hidden" value="3" style="visibility: visible" id="fade_map1">Map3</button>
+	<button onclick="switchQuad('4')" style="visibility: hidden" value="4" style="visibility: visible" id="fade_map1">Map4</button>
 	
 	<div class="overlay" id="overlay1"  style="z-index: 100"></div>
 <div class="box" style="" id="box1" style="">

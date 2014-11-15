@@ -1,9 +1,11 @@
 
-  		  html { height: 100% }
-  body { height: 100%; margin: 0; padding: 0 }
+  		  html { height: 100% ; overflow-y: scroll;}
+  body { height: 100%; margin: 0; padding: 0; font: 13px/18px 'Open Sans',arial,sans-serif; margin: 0;
+padding: 0;display: block;}
+font-weight: 400; }
  	font-size: 11px;font-family: 'lucida grande',tahoma,verdana,arial,sans-serif;
 		padding-bottom:20px; }
-    .metaphore{height:100px; width:100%}
+    .metaphore{height:100px; width:100%;}
 	
   .icon{height:60px;width:55px; float: left}
   
@@ -61,3 +63,11 @@
         top: -1000px;
         left: 30%;
         right: 30%;}
+        
+ hr{height:1px;color:#d7d7d7;background-color:#d1d1d1;border:0;width:80%;margin:20px 0; display: block;
+-webkit-margin-before: 0.5em;
+-webkit-margin-after: 0.5em;
+-webkit-margin-start: auto;
+-webkit-margin-end: auto;
+border-style: inset;
+}
