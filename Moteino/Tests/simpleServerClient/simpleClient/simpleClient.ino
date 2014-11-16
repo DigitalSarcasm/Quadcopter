@@ -26,6 +26,7 @@ byte SERVERID = 0;
 
 RFM69 radio;
 SPIFlash flash(FLASH_LED, 0xEF30);
+byte d[80];
 
 void setup()
 {
@@ -42,7 +43,7 @@ void setup()
 	else
 		Serial.println("Flash initialization: FAILURE");
 
-        //promiscuity is not needed
+	//promiscuity is not needed
 	//radio.promiscuous(true);	//turn on promiscuity because we do not know
 	delay(200);                     //have to sync up the client or server or the client might finish
 	milstart = millis();              //handshaking before server starts up
@@ -57,6 +58,7 @@ void setup()
 
 		while((millis()-milstart) < HANDSHAKINGWAIT) {	//waits for ACK
 			if(radio.receiveDone()) {
+                                //Serial.println(radio.ACK_RECEIVED, DEC);
 				if(radio.ACK_RECEIVED) {
 					SERVERID = radio.SENDERID;		//Get server's address
 					Serial.print("Handshaking successful. Server Id: ");	//servers address
@@ -65,36 +67,67 @@ void setup()
 				}
 			}
 		}
+                milstart = millis();
 		attempts++;
 	}
 	//radio.promiscuous(false);
+	Serial.println(SERVERID, DEC);
+        Serial.println("Handshaking complete");
+
+	for(int i=1; i< 80; i++)
+		d[i] = i;
 }
 
 
 void loop()
 {
 	bool reqack = false;
-	
+
 	//Checks for handshake
 	if(SERVERID == 0) //handshake has failed
 		return;
-	
+
 	//requests transmission
-	
+
 	byte buf[62];
 	byte packettype = B01000000; //request transmission (2)
 	buf[0] = packettype;
 	int psize = sizeof(buf);
-	
-	while(1){
-		if(radio.canSend())
-			radio.send(SERVERID, buf, psize);
-	}
-	
-	//sends large data block bigger than 61 bytes
-	
-	
 
+	while(1) {
+		if(radio.canSend()){
+			if(radio.sendWithRetry(SERVERID, &packettype, sizeof(packettype), 4))
+			  break;
+		}
+	}
+	Serial.println("Request sent");
+
+	//wait for ack and send large data block bigger than 61 bytes
+	bool txend = false;
+	while(!txend) {
+		while(!radio.receiveDone());
+		Serial.println("Received packet");
+		//if the received packet is a request packet and it was acknowledged
+		
+		radio.sendACK();
+		
+		if(getPacketType(radio.DATA[0]) == 2 && getPacketData(radio.DATA[0]) == 1){
+			Serial.println("Sending data");
+			d[0] = B01100000;
+			radio.sendWithRetry(SERVERID, d, sizeof(d));
+			txend = true;
+		}
+	}
+
+Serial.println("Send complete");
+}
+
+byte getPacketType(byte ptype)
+{
+	byte typeMask = B11100000;	//mask everthing but packet type bits
+	byte type = ptype & typeMask;
+	type = type >> 5;
+	return type;
 }
 
 void blink(byte PIN, int DELAY_MS)
@@ -103,4 +136,10 @@ void blink(byte PIN, int DELAY_MS)
 	digitalWrite(PIN,HIGH);
 	delay(DELAY_MS);
 	digitalWrite(PIN,LOW);
+}
+
+byte getPacketData(byte ptype){
+	byte typeMask = B00011111;
+	byte data = ptype & typeMask;
+	return data;
 }
