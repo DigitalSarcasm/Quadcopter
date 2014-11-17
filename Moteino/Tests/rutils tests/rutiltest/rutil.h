@@ -35,13 +35,13 @@ public:
 
 	
 	byte* getData();
-	void getData(byte* buffer, byte size);	//not tested
+	void getData(byte* buffer, byte size);
 	void setData(byte* data, const byte& size);
 	
 	byte length(){return dataLength;}
 	
 	byte getOverhead();
-	void setOverhead(const byte& overhead);	//not tested
+	void setOverhead(const byte& overhead);
 	void setOverhead(const byte& ptype, const byte& meta);
 	
 	byte getType();
