@@ -149,12 +149,21 @@
   <Dependencies Name="Debug"/>
   <Dependencies Name="Release"/>
   <VirtualDirectory Name="Tests">
+    <VirtualDirectory Name="rutils tests">
+      <VirtualDirectory Name="rutiltest">
+        <File Name="Tests/rutils tests/rutiltest/rutil.h"/>
+        <File Name="Tests/rutils tests/rutiltest/rutils.cpp"/>
+        <File Name="Tests/rutils tests/rutiltest/rutiltest.ino"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
     <VirtualDirectory Name="simpleServerClient">
       <VirtualDirectory Name="simpleClient">
         <File Name="Tests/simpleServerClient/simpleClient/simpleClient.ino"/>
       </VirtualDirectory>
       <VirtualDirectory Name="simpleServer">
         <File Name="Tests/simpleServerClient/simpleServer/simpleServer.ino"/>
+        <File Name="Tests/simpleServerClient/simpleServer/rutil.h"/>
+        <File Name="Tests/simpleServerClient/simpleServer/rutils.cpp"/>
       </VirtualDirectory>
     </VirtualDirectory>
     <VirtualDirectory Name="simplerxtx">
@@ -174,5 +183,11 @@
     <VirtualDirectory Name="rssiCheck">
       <File Name="Tests/rssiCheck/rssiCheck.ino"/>
     </VirtualDirectory>
+  </VirtualDirectory>
+  <VirtualDirectory Name="Contrib">
+    <File Name="Contrib/Collection.cpp"/>
+    <File Name="Contrib/Collection.h"/>
+    <File Name="Contrib/rutil.h"/>
+    <File Name="Contrib/rutils.cpp"/>
   </VirtualDirectory>
 </CodeLite_Project>

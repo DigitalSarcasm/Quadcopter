@@ -1,7 +1,7 @@
 #include "rutil.h"
-#include "Arduino.h"
+//#include "Arduino.h"
 
-//Timer object 
+//////////////////////////Timer object 
 
 Timer::Timer(){
 	startTime = 0;
@@ -27,7 +27,8 @@ unsigned long Timer::getTime(){
 
 
 
-//Packet Object
+//////////////////////Packet Object
+
 //constructor for empty packet object
 Packet::Packet(){
 	overhead = 0;
@@ -135,4 +136,61 @@ byte Packet::getPacketMeta(const byte& overhead){
 	byte typeMask = B00011111;
 	byte data = overhead & typeMask;
 	return data;
+}
+
+
+///////////////PacketQueue
+
+template<int arraySize>
+int PacketQueue<arraySize>::findEmpty(){
+	for(byte i<0; i<size; i++){
+		if(collection[i].getOverhead() == 0)
+			return i;
+	}
+	else
+		return -1;
+}
+
+
+template<int arraySize>
+PacketQueue<arraySize>::PacketQueue(){
+	head = tail = 0;
+}
+
+template<int arraySize>
+int PacketQueue<arraySize>::queue(const Packet& pack){
+	if(head == tail)	//if the lookup table is full or empty
+		return -1;
+
+	byte index = findEmpty();	//find empty index in queue
+	collection[index] = pack;	//copy packet
+	if(tail >= size)
+		tail = tail % size;
+	lookup[tail] = index;
+	return 1;
+}
+
+template<int arraySize>
+int PacketQueue<arraySize>::queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority){
+	return queue(Packet(ptype, meta, data, dataLength, priority));
+}
+
+
+template<int arraySize>
+Packet PacketQueue<arraySize>::dequeue(){
+	byte index;
+	
+	if(head == tail)		//if the lookup table is full or empty
+		return Packet();	//return empty packet
+	
+	if(tail==0 && head!=0)
+		index = size-1;
+	else
+		index = tail-1;
+	
+	Packet temp = collection[lookup[index]];
+	tail = index;
+	collection[lookup[index]].setOverhead(EMPTYPACKET);
+	
+	return temp;
 }

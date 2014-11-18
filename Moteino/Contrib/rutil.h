@@ -3,8 +3,14 @@
 
 #include "Arduino.h"
 #include <exception.h>
+#include <StandardCplusplus.h>
+#include <vector>
 
 #define PACKETSIZE 60
+
+#define QUEUESIZE 5;
+
+#define EMPTYPACKET 0;
 
 //Timer object declaration
 
@@ -55,6 +61,30 @@ public:
 	static byte makeOverhead(const byte& ptype, byte meta);
 	static byte getPacketType(const byte& overhead);
 	static byte getPacketMeta(const byte& overhead);
+};
+
+
+//PacketQueue
+//Array list that behaves like linked list
+template<int arraySize=QUEUESIZE>
+class PacketQueue{
+protected:
+	Packet collection[arraySize];
+	byte lookup[arraySize];			//lookup table
+	byte size = arraySize;
+	byte head, tail;			//head and tail of collection
+	
+	int findEmpty();
+public:
+	PacketQueue();
+	
+	int queue(const Packet& pack);
+	int queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority = 0);
+	Packet dequeue();
+	
+	//TODO
+	//void smartQueue(); //compares packets from multiple clients and arranges the packets as to 
+						//allow all clients equal comm. time
 };
 
 
