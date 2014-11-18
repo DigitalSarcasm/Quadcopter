@@ -172,6 +172,7 @@ int PacketQueue<arraySize>::queue(const Packet& pack){
 
 template<int arraySize>
 int PacketQueue<arraySize>::queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority){
+	//TODO should separate the data into multiple packets with proper overhead
 	return queue(Packet(ptype, meta, data, dataLength, priority));
 }
 
