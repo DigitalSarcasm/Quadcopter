@@ -177,6 +177,10 @@ bool RFM69::canSend()
   return false;
 }
 
+bool RFM69::activity(){
+	return (readRSSI() > CSMA_LIMIT);
+}
+
 void RFM69::send(byte toAddress, const void* buffer, byte bufferSize, bool requestACK)
 {
   writeReg(REG_PACKETCONFIG2, (readReg(REG_PACKETCONFIG2) & 0xFB) | RF_PACKET2_RXRESTART); // avoid RX deadlocks
