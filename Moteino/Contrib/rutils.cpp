@@ -59,15 +59,23 @@ byte* Packet::getData(){
 	return data;
 }
 
-void Packet::getData(byte* buffer, byte size){
+byte Packet::getData(byte* buffer, byte size){
+	if(size > dataLength)
+		return 0;
+		
 	for(int i=0; i<size; i++)
 		buffer[i] = data[i];
+	return 1;
 }
 
-void Packet::setData(byte* data, const byte& size){
+byte Packet::setData(byte* data, const byte& size){
+	if(size > dataLength)
+		return 0;
+	
 	for(int i=0; i< size; i++)
 		this->data[i] = data[i];
 	this->dataLength = size;
+	return 1;
 }
 
 byte Packet::getOverhead(){
@@ -78,29 +86,39 @@ void Packet::setOverhead(const byte& overhead){
 	this->overhead = overhead;
 }
 
-void Packet::setOverhead(const byte& ptype, const byte& meta){
+byte Packet::setOverhead(const byte& ptype, const byte& meta){
+	if( (ptype > TYPES -1) || (meta > METAS -1))
+		return 0;
+		
 	this->overhead = makeOverhead(ptype, meta);
+	return 1;
 }
 
 byte Packet::getType(){
 	return getPacketType(overhead);
 }
 
-void Packet::setType(byte ptype){
+byte Packet::setType(byte ptype){
 	//check that type only has the first 3 bits set (0->8)
+	if(ptype > TYPES-1)
+		return 0;
 	ptype = ptype << 5;	//new type bits
 	overhead = overhead & B00011111; //mask old type bits
 	overhead = overhead | ptype;	//add new type bits to ovehead
+	return 1;
 }
 
 byte Packet::getMeta(){
 	return getPacketMeta(overhead);
 }
 
-void Packet::setMeta(byte meta){
+byte Packet::setMeta(byte meta){
 	//check if meta is only the first 5 bits set (0->31)
+	if(meta > METAS-1)
+		return 0;
 	overhead = overhead & B11100000; //mask last meta bits
 	overhead = overhead | meta;	//add new meta bits
+	return 1;
 }
 
 byte Packet::getPriority(){
@@ -112,8 +130,12 @@ void Packet::setPriority(const byte& priority){
 }
 
 //Makes overhead byte from type and meta bytes. Uses bit masking and adding
+//returns EMPTYPACKET for invalid overhead
 byte Packet::makeOverhead(const byte& ptype, byte meta){
 	byte overhead = B00000000;
+	
+	if((ptype > TYPES-1) || (meta > METAS-1) )
+		return EMPTYPACKET;
 	
 	overhead = overhead | ptype;	//get type bits
 	overhead = overhead << 5;		//shift type bits
@@ -158,9 +180,9 @@ PacketQueue<arraySize>::PacketQueue(){
 }
 
 template<int arraySize>
-int PacketQueue<arraySize>::queue(const Packet& pack){
+byte PacketQueue<arraySize>::queue(const Packet& pack){
 	if(head == tail)	//if the lookup table is full or empty
-		return -1;
+		return 0;
 
 	byte index = findEmpty();	//find empty index in queue
 	collection[index] = pack;	//copy packet
@@ -171,7 +193,7 @@ int PacketQueue<arraySize>::queue(const Packet& pack){
 }
 
 template<int arraySize>
-int PacketQueue<arraySize>::queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority){
+byte PacketQueue<arraySize>::queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority){
 	//TODO should separate the data into multiple packets with proper overhead
 	return queue(Packet(ptype, meta, data, dataLength, priority));
 }

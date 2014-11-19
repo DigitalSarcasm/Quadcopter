@@ -3,12 +3,14 @@
 
 #include "Arduino.h"
 #include <exception.h>
-#include <StandardCplusplus.h>
-#include <vector>
+//#include <StandardCplusplus.h>
+//#include <vector>
 
 #define PACKETSIZE 60
 
 #define QUEUESIZE 5;
+#define TYPES 8
+#define METAS 32
 
 #define EMPTYPACKET 0;
 
@@ -45,8 +47,8 @@ public:
 
 	
 	byte* getData();	//get pointer to data buffer
-	void getData(byte* buffer, byte size);	//not tested //copy data buffer to another buffer
-	void setData(byte* data, const byte& size);	//set data buffer
+	byte getData(byte* buffer, byte size);	//not tested //copy data buffer to another buffer
+	byte setData(byte* data, const byte& size);	//set data buffer
 	
 	byte length(){return dataLength;}	//return length of data buffer
 	
@@ -55,9 +57,9 @@ public:
 	void setOverhead(const byte& ptype, const byte& meta);	//set overhead byte using type and meta
 	
 	byte getType();
-	void setType(byte ptype);
+	byte setType(byte ptype);
 	byte getMeta();
-	void setMeta(byte meta);
+	byte setMeta(byte meta);
 	
 	byte getPriority();
 	void setPriority(const byte& Priority);
@@ -82,8 +84,8 @@ protected:
 public:
 	PacketQueue();
 	
-	int queue(const Packet& pack);
-	int queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority = 0);
+	byte queue(const Packet& pack);
+	byte queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority = 0);
 	Packet dequeue();
 	
 	//TODO
