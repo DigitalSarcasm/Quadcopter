@@ -9,6 +9,7 @@
 #define PACKETSIZE 60
 
 #define QUEUESIZE 5;
+#define LISTSIZE 5;
 #define TYPES 8
 #define METAS 32
 
@@ -93,5 +94,16 @@ public:
 						//allow all clients equal comm. time and base it off 
 };
 
+//holds list of clients and whether or not they have a requested data transmission
+template<int ARRAYSIZE = LISTSIZE>
+class ClientList{
+protected:
+	byte clientList[ARRAYSIZE];
+	byte hasRequest[ARRAYSIZE];
+	byte maxSize = ARRAYSIZE;
+	byte size;
+public:
+	
+};
 
 #endif //RUTILS_H

@@ -32,6 +32,23 @@ void loop(){
 	
 }
 
+//handles handshaking phase
 byte handshake(){
+	
+}
+
+void processing(){
+	
+}
+
+byte query(){
+	
+}
+
+void transmitData(){
+	
+}
+
+void receiveData(){
 	
 }

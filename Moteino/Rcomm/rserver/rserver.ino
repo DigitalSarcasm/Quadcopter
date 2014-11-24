@@ -19,8 +19,11 @@ byte NODEID = DEFAULTSERVERID;
 
 byte curClientID = 2;	//used to assign unique id's to clients
 byte clientIds[MAXCLIENTS];	//holds client id's 
+
 RFM69 radio;
 SPIFlash flash(FLASH_LED, 0xEF30);
+
+PacketQueue queue;
 
 void setup(){
 	Serial.begin(SERIALBAUD);	//Initialize serial
@@ -35,6 +38,27 @@ void loop(){
 	
 }
 
-byte handshake(){
+//handles handshaking phase
+void handshake(){
+	
+}
+
+//handles request query phase
+void queryRequest(){
+	
+}
+
+//handles data reception phase
+void receiveData(){
+	
+}
+
+//handles processing stage
+void processing(){
+	
+}
+
+//handles data transmission phase
+void transmitData(){
 	
 }
