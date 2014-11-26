@@ -99,11 +99,16 @@ template<int ARRAYSIZE = LISTSIZE>
 class ClientList{
 protected:
 	byte clientList[ARRAYSIZE];
-	byte hasRequest[ARRAYSIZE];
+	bool hasRequest[ARRAYSIZE];	//hash table instead of list
 	byte maxSize = ARRAYSIZE;
 	byte size;
 public:
-	
+	byte add(byte client);
+	byte remove(byte client);
+	bool getRequest(byte client);
+	void toggleRequest(byte client);
 };
 
+
+//#include "rutils.cpp"
 #endif //RUTILS_H

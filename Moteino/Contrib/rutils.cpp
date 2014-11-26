@@ -163,8 +163,8 @@ byte Packet::getPacketMeta(const byte& overhead){
 
 ///////////////PacketQueue
 
-template<int arraySize>
-int PacketQueue<arraySize>::findEmpty(){
+template<int ARRAYSIZE>
+int PacketQueue<ARRAYSIZE>::findEmpty(){
 	for(byte i<0; i<size; i++){
 		if(collection[i].getOverhead() == 0)
 			return i;
@@ -174,13 +174,13 @@ int PacketQueue<arraySize>::findEmpty(){
 }
 
 
-template<int arraySize>
-PacketQueue<arraySize>::PacketQueue(){
+template<int ARRAYSIZE>
+PacketQueue<ARRAYSIZE>::PacketQueue(){
 	head = tail = 0;
 }
 
-template<int arraySize>
-byte PacketQueue<arraySize>::queue(const Packet& pack){
+template<int ARRAYSIZE>
+byte PacketQueue<ARRAYSIZE>::queue(const Packet& pack){
 	if(head == tail)	//if the lookup table is full or empty
 		return 0;
 
@@ -192,15 +192,15 @@ byte PacketQueue<arraySize>::queue(const Packet& pack){
 	return 1;
 }
 
-template<int arraySize>
-byte PacketQueue<arraySize>::queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority){
+template<int ARRAYSIZE>
+byte PacketQueue<ARRAYSIZE>::queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority){
 	//TODO should separate the data into multiple packets with proper overhead
 	return queue(Packet(ptype, meta, data, dataLength, priority));
 }
 
 
-template<int arraySize>
-Packet PacketQueue<arraySize>::dequeue(){
+template<int ARRAYSIZE>
+Packet PacketQueue<ARRAYSIZE>::dequeue(){
 	byte index;
 	
 	if(head == tail)		//if the lookup table is full or empty
@@ -216,4 +216,45 @@ Packet PacketQueue<arraySize>::dequeue(){
 	collection[lookup[index]].setOverhead(EMPTYPACKET);
 	
 	return temp;
+}
+
+////////////ClientList
+
+template<int ARRAYSIZE>
+byte ClientList<ARRAYSIZE>::add(byte client){
+	//test if the client is already added
+	for(int i=0; i<size; i++){
+		if(clientList[i] == client)
+			return 0;
+	}
+	
+	clientList[size] = client;
+	hasRequest[client] = false;
+	size++;
+}
+
+template<int ARRAYSIZE>
+byte ClientList<ARRAYSIZE>::remove(byte client){
+	for(int i=0; i<size; i++){		//find client in list
+		if(clientList[i] == client){	//if client found
+			for(int j=i; j<size-1; j++){	//move every client back one index
+				clientList[j] = clientList[j+1];
+//				hasRequest[j] = hasRequest[j+1];
+			}
+			size--;					
+			return 1;
+		}
+	}
+	return 0;	//client was not found in list
+}
+
+
+template<int ARRAYSIZE>
+bool ClientList<ARRAYSIZE>::getRequest(byte client){
+	return hasRequest[client];
+}
+
+template<int ARRAYSIZE>
+bool ClientList<ARRAYSIZE>::toggleRequest(byte client){
+	hasRequest[client] = !hasRequest[client];	//toggle request
 }
