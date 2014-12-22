@@ -42,7 +42,7 @@ protected:
 	byte dataLength;	//data buffers length, this is not sent as it will already be sent in the RFM69 function
 	byte priority;		//priority of packet, currently unused 
 public:
-	Packet();	//cosntructor for empty packet
+	Packet();	//constructor for empty packet
 	Packet(const byte& overhead, byte* data, const byte& dataLength, const byte& priority = 0); //constructor for packet knowing the ovehead byte
 	Packet(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority = 0);	//constructor for packet knowing type and meta data
 
@@ -73,21 +73,26 @@ public:
 
 //PacketQueue
 //Array list that behaves like linked list
+//the packets are stored in the collection in a FIFO order but the lookup table to them can be changed easily (byte array)
+//the lookup table on the otherhand is a circular list
+//this is because changing the order of packets is heavy compared to changing the order in the lookuptable
 template<int arraySize=QUEUESIZE>
 class PacketQueue{
 protected:
 	Packet collection[arraySize];	//collection of packets, order not guarenteed
 	byte lookup[arraySize];			//lookup table for packets in collection
-	byte size;			//size of lookup table and collection array
-	byte head, tail;				//head and tail of collection
+	byte size, maxSize;			//size and maxsize of lookup table and collection array
+	byte head, tail;			//head and tail of collection
 	
-	int findEmpty();				//find first empty index in collection array
+	int findEmpty();			//find first empty index in collection array
 public:
 	PacketQueue();
 	
 	byte queue(const Packet& pack);
 	byte queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority = 0);
 	Packet dequeue();
+	
+	byte length(){return size;}
 	
 	//TODO
 	//void smartQueue(); //compares packets from multiple clients and arranges the packets as to 
@@ -116,61 +121,69 @@ public:
 
 ///////////////PacketQueue
 
-//template<int ARRAYSIZE>
-//int PacketQueue<ARRAYSIZE>::findEmpty(){
-//	for(byte i=0; i<size; i++){
-//		if(collection[i].getOverhead() == 0)
-//			return i;
-//	}
-//	return -1;
-//}
-//
-//
-//template<int ARRAYSIZE>
-//PacketQueue<ARRAYSIZE>::PacketQueue(){
-//	head = tail = 0;
-//	size = ARRAYSIZE;
-//}
-//
-//template<int ARRAYSIZE>
-//byte PacketQueue<ARRAYSIZE>::queue(const Packet& pack){
-//	if(head == tail)	//if the lookup table is full or empty
-//		return 0;
-//
-//	byte index = findEmpty();	//find empty index in queue
-//	collection[index] = pack;	//copy packet
-//	if(tail >= size)
-//		tail = tail % size;
-//	lookup[tail] = index;
-//	return 1;
-//}
-//
-//template<int ARRAYSIZE>
-//byte PacketQueue<ARRAYSIZE>::queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority){
-//	//TODO should separate the data into multiple packets with proper overhead
-//	return queue(Packet(ptype, meta, data, dataLength, priority));
-//}
-//
-//
-//template<int ARRAYSIZE>
-//Packet PacketQueue<ARRAYSIZE>::dequeue(){
-//	byte index;
-//	
-//	if(head == tail)		//if the lookup table is full or empty
-//		return Packet();	//return empty packet
-//	
-//	if(tail==0 && head!=0)
-//		index = size-1;
-//	else
-//		index = tail-1;
-//	
-//	Packet temp = collection[lookup[index]];
-//	tail = index;
-//	collection[lookup[index]].setOverhead(EMPTYPACKET);
-//	
-//	return temp;
-//}
-//
+/*
+ * Finds first available spot in the collection. A default packet (overhead = 0) means that the index is empty
+ * An default packet is not necessarly empty, just that it has been removed from use (dequeue)
+ * returns an int on success
+ * else returns -1 for failure
+ */
+template<int ARRAYSIZE>
+int PacketQueue<ARRAYSIZE>::findEmpty(){
+	for(byte i=0; i<maxSize; i++){
+		if(collection[i].getOverhead() == 0)
+			return i;
+	}
+	return -1;
+}
+
+
+template<int ARRAYSIZE>
+PacketQueue<ARRAYSIZE>::PacketQueue(){
+	head = tail = 0;
+	size = 0;
+	maxSize = ARRAYSIZE;
+}
+
+template<int ARRAYSIZE>
+byte PacketQueue<ARRAYSIZE>::queue(const Packet& pack){
+	if(head == tail && size != 0) //if the lookup table is full
+		return 0;
+
+	byte index = findEmpty();	//find empty index in queue
+	
+	collection[index] = pack;	//copy packet
+	lookup[tail] = index;		//add index to lookup table
+	tail++;						
+	if(tail >= maxSize)			//compute next tail position
+		tail = tail % maxSize;
+	
+	size++;
+	return 1;
+}
+
+template<int ARRAYSIZE>
+byte PacketQueue<ARRAYSIZE>::queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority){
+	//TODO should separate the data into multiple packets with proper overhead when the datalenght is bigger PACKETSIZE
+	return queue(Packet(ptype, meta, data, dataLength, priority));
+}
+
+
+template<int ARRAYSIZE>
+Packet PacketQueue<ARRAYSIZE>::dequeue(){
+	if(head == tail && size == 0)		//if the lookup table is empty
+		return Packet();			//return default packet
+	
+	Packet temp = collection[lookup[head]];
+	collection[lookup[head]].setOverhead(EMPTYPACKET);
+	
+	head++;
+	if(head >= maxSize)			//compute next tail position
+		head = head % maxSize;
+		
+	size--;
+	return temp;
+}
+
 //////////////ClientList
 //
 //template<int ARRAYSIZE>

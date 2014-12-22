@@ -1,6 +1,7 @@
 #include "rutil.h"
 #include <ArduinoUnit.h>
 
+///////////////////////////timer tests
 test(timer_not_started){
 	Timer t;
 	assertEqual(t.getTime(), 0);
@@ -27,7 +28,7 @@ test(timer_timing){
 }
 
 
-///packet tests
+////////////////////////////////////packet tests
 test(packet_default_constructor){
 	Packet p;
 	assertEqual(p.getType(), 0);
@@ -159,6 +160,101 @@ test(packet_set_overhead){
 	
 	assertEqual(p.setMeta(32), 0); //it went over the byte limit for meta
 }
+
+////////////////////////////PacketQueue tests
+
+test(packetqueue_queue_dequeue_packet){
+	Packet p1(5,20,0,0);
+	Packet p2(1,12,0,0);
+	Packet p3(7,30,0,0);
+	PacketQueue<> q;
+
+	assertEqual(q.length(), 0);
+
+	q.queue(p1);
+	
+	assertEqual(q.length(), 1);
+	assertEqual(q.dequeue().getOverhead(), p1.getOverhead());
+	assertEqual(q.length(), 0);
+	
+	q.queue(p1);
+	q.queue(p2);
+	assertEqual(q.length(), 2);
+	
+	assertEqual(q.dequeue().getOverhead(), p1.getOverhead());
+	assertEqual(q.length(), 1);
+	
+	q.queue(p3);
+	assertEqual(q.length(), 2);
+	assertEqual(q.dequeue().getOverhead(), p2.getOverhead());	
+	assertEqual(q.dequeue().getOverhead(), p3.getOverhead());
+	assertEqual(q.length(), 0);
+	
+	assertEqual(q.dequeue().getOverhead(), Packet().getOverhead());	//should return empty packet
+	
+}
+
+test(packetqueue_queue_dequeue_data){
+//	Packet(5,20,0,0);
+//	Packet(1,12,0,0);
+//	Packet(7,30,0,0);
+	PacketQueue<> q;
+
+	assertEqual(q.length(), 0);
+
+	q.queue(5, 20, 0, 0);
+	
+	assertEqual(q.length(), 1);
+	assertEqual(q.dequeue().getOverhead(), Packet(5,20,0,0).getOverhead());
+	assertEqual(q.length(), 0);
+	
+	q.queue(5, 20, 0, 0);
+	q.queue(1, 12, 0, 0);
+	assertEqual(q.length(), 2);
+	
+	assertEqual(q.dequeue().getOverhead(), Packet(5,20,0,0).getOverhead());
+	assertEqual(q.length(), 1);
+	
+	q.queue(7, 30, 0, 0);
+	assertEqual(q.length(), 2);
+	assertEqual(q.dequeue().getOverhead(), Packet(1,12,0,0).getOverhead());
+	assertEqual(q.length(), 1);
+	assertEqual(q.dequeue().getOverhead(), Packet(7,30,0,0).getOverhead());
+	assertEqual(q.length(), 0);
+	assertEqual(q.dequeue().getOverhead(), Packet().getOverhead());	//should return empty packet
+}
+
+test(packetqueue_overfill_queue){
+	PacketQueue<> q;
+	
+	for(int i=0; i<QUEUESIZE; i++)
+		assertEqual(q.queue(Packet(5,20,0,0)), 1);
+		
+	assertEqual(q.length(), QUEUESIZE);
+	assertEqual(q.queue(Packet(5,20,0,0)), 0);
+	
+	q.dequeue();
+	assertEqual(q.queue(Packet(5,20,0,0)), 1);
+}
+
+test(packetqueue_cycle_queue){
+	PacketQueue<> q;
+	
+	for(int i=0; i<QUEUESIZE; i++)
+		q.queue(Packet(i,20,0,0));
+		
+	assertEqual(q.length(), QUEUESIZE);
+	
+	for(int i=0; i<QUEUESIZE/2; i++)	//dequeue half
+		assertEqual(q.dequeue().getType(), i);
+		
+	assertEqual(q.length(),  QUEUESIZE - QUEUESIZE/2);
+	
+	q.queue(Packet(5,20,0,0));
+	
+	assertEqual(q.dequeue().getType(), QUEUESIZE/2);
+}
+
 
 void setup(){
 	Serial.begin(115200);
