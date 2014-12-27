@@ -6,17 +6,31 @@
 //#include <StandardCplusplus.h>
 //#include <vector>
 
-#define PACKETSIZE 60
+#define PACKETSIZE 61
 
 #define QUEUESIZE 5
 #define LISTSIZE 5
 #define TYPES 8
 #define METAS 32
+#define DATACHECK 10
 
+//packet types
 #define EMPTYPACKET 0
+#define REQUESTPACKET 1
+#define DATAPACKET 2
+#define LOGGINGPACKET 6
+#define EMERGENCYPACKET 7
 
-//Timer object declaration
+//metas
+//request packet
+#define HSREQ 0
+#define TXREQ 1
+#define OPENAIR 3
 
+
+
+
+////////////Timer object declaration
 class Timer{
 protected:
 	unsigned long startTime;
@@ -37,21 +51,25 @@ public:
  */
 class Packet{
 protected:
-	byte overhead;		//Overhead byte, includes type and metadata
-	byte data[PACKETSIZE];	//data buffer
+	byte data[PACKETSIZE];	//data buffer, includes overhead bytes as index 0
 	byte dataLength;	//data buffers length, this is not sent as it will already be sent in the RFM69 function
 	byte priority;		//priority of packet, currently unused 
 public:
 	Packet();	//constructor for empty packet
 	Packet(const byte& overhead, byte* data, const byte& dataLength, const byte& priority = 0); //constructor for packet knowing the ovehead byte
-	Packet(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority = 0);	//constructor for packet knowing type and meta data
-
+	Packet(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority);	//constructor for packet knowing type and meta data, priority is mandatory as it can be confused with the previous constructor
+	Packet(const Packet& p);
+	
+	void operator=(const Packet& p);
+	bool operator==(const Packet& p);
 	
 	byte* getData();	//get pointer to data buffer
+	byte* getPacket();	//returns databuffer with overhead
 	byte getData(byte* buffer, const byte& size);	//not tested //copy data buffer to another buffer
 	byte setData(byte* data, const byte& size);	//set data buffer
 	
 	byte length(){return dataLength;}	//return length of data buffer
+	byte plength(){return dataLength+1;}	//returns length of data buffer + overhead
 	
 	byte getOverhead();	//get overhead byte
 	void setOverhead(const byte& overhead);	//not tested //set overhead byte
@@ -87,6 +105,9 @@ protected:
 	int findEmpty();			//find first empty index in collection array
 public:
 	PacketQueue();
+	PacketQueue(const PacketQueue& pq);
+	
+	void operator=(const PacketQueue& pq);
 	
 	byte queue(const Packet& pack);
 	byte queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority = 0);
@@ -105,17 +126,20 @@ class ClientList{
 protected:
 	byte clientList[ARRAYSIZE];
 	bool hasRequest[ARRAYSIZE];	//hash table instead of list
-	byte maxSize;
-	byte size;
+	byte maxSize, size;
 public:
 	ClientList();
-	byte add(byte client);
-	byte remove(byte client);
-	bool getRequest(byte client);
-	void toggleRequest(byte client);
+	
+	byte lenght(){return size;}
+	
+	byte getClient(const byte& index);
+	byte getRequest(const byte& index);
+	void toggleRequest(const byte& index);
+	
+	byte add(const byte& client);
+	byte remove(const byte& client);
+	int searchClient(const byte& client);
 };
-
-
 
 
 
@@ -143,6 +167,37 @@ PacketQueue<ARRAYSIZE>::PacketQueue(){
 	size = 0;
 	maxSize = ARRAYSIZE;
 }
+
+//copy constructor should never be used with a packetqueue that has a different arraysize
+//not tested
+template<int ARRAYSIZE>
+PacketQueue<ARRAYSIZE>::PacketQueue(const PacketQueue& pq){
+	head = pq.head;
+	tail = pq.tail;
+	size = pq.size;
+	maxSize = pq.maxSize;
+	
+	for(int i=0; i<maxSize; i++){
+		collection[i] = pq.collection[i];
+		lookup[i] = pq.lookup[i];
+	}
+}
+
+//assignment operator should never be used with a packetqueue that has a different arraysize
+//not tested
+template<int ARRAYSIZE>
+void PacketQueue<ARRAYSIZE>::operator=(const PacketQueue& pq){
+	head = pq.head;
+	tail = pq.tail;
+	size = pq.size;
+	maxSize = pq.maxSize;
+	
+	for(int i=0; i<maxSize; i++){
+		collection[i] = pq.collection[i];
+		lookup[i] = pq.lookup[i];
+	}
+}
+
 
 template<int ARRAYSIZE>
 byte PacketQueue<ARRAYSIZE>::queue(const Packet& pack){
@@ -185,50 +240,83 @@ Packet PacketQueue<ARRAYSIZE>::dequeue(){
 }
 
 //////////////ClientList
-//
-//template<int ARRAYSIZE>
-//ClientList<ARRAYSIZE>::ClientList(){
-//	size = ARRAYSIZE;
-//}
-//
-//template<int ARRAYSIZE>
-//byte ClientList<ARRAYSIZE>::add(byte client){
-//	//test if the client is already added
-//	for(int i=0; i<size; i++){
-//		if(clientList[i] == client)
-//			return 0;
-//	}
-//	
-//	clientList[size] = client;
-//	hasRequest[client] = false;
-//	size++;
-//}
-//
-//template<int ARRAYSIZE>
-//byte ClientList<ARRAYSIZE>::remove(byte client){
-//	for(int i=0; i<size; i++){		//find client in list
-//		if(clientList[i] == client){	//if client found
-//			for(int j=i; j<size-1; j++){	//move every client back one index
-//				clientList[j] = clientList[j+1];
-////				hasRequest[j] = hasRequest[j+1];
-//			}
-//			size--;					
-//			return 1;
-//		}
-//	}
-//	return 0;	//client was not found in list
-//}
-//
-//
-//template<int ARRAYSIZE>
-//bool ClientList<ARRAYSIZE>::getRequest(byte client){
-//	return hasRequest[client];
-//}
-//
-//template<int ARRAYSIZE>
-//bool ClientList<ARRAYSIZE>::toggleRequest(byte client){
-//	hasRequest[client] = !hasRequest[client];	//toggle request
-//}
+
+template<int ARRAYSIZE>
+ClientList<ARRAYSIZE>::ClientList(){
+	size = 0;
+	maxSize = ARRAYSIZE;
+}
+
+template<int ARRAYSIZE>
+byte ClientList<ARRAYSIZE>::getClient(const byte& index){
+	return clientList[index];
+}
+
+
+template<int ARRAYSIZE>
+byte ClientList<ARRAYSIZE>::getRequest(const byte& index){
+	return hasRequest[index];
+}
+
+//toggles request for that index
+template<int ARRAYSIZE>
+void ClientList<ARRAYSIZE>::toggleRequest(const byte& index){
+	hasRequest[index] = !hasRequest[index];	//toggle request
+}
+
+//returns 1 if successful, else returns 0 if the client is already in list or the list is full
+template<int ARRAYSIZE>
+byte ClientList<ARRAYSIZE>::add(const byte& client){
+	if(size == maxSize)	//list is full
+		return 0;
+	
+	//test if the client is already added
+	for(int i=0; i<size; i++){
+		if(clientList[i] == client)
+			return 0;
+	}
+	
+	clientList[size] = client;
+	hasRequest[size] = false;
+	size++;
+	return 1;
+}
+
+//returns 1 if the client was removed, else returns 0 if not found
+template<int ARRAYSIZE>
+byte ClientList<ARRAYSIZE>::remove(const byte& client){
+	
+	if(size == 0)	//list is empty
+		return 0;
+	
+	for(int i=0; i<size; i++){		//find client in list
+		if(clientList[i] == client){	//if client found
+			for(int j=i; j<size-1; j++){	//move every client back one index
+				clientList[j] = clientList[j+1];
+				hasRequest[j] = hasRequest[j+1];
+			}
+			size--;					
+			return 1;
+		}
+	}
+	return 0;	//client was not found in list
+}
+
+
+template<int ARRAYSIZE>
+int ClientList<ARRAYSIZE>::searchClient(const byte& client){
+	if(size == 0)
+		return -1;
+		
+	for(int i=0; i<size; i++){
+		if(clientList[i] == client)
+			return i;
+	}
+	
+	return -1;
+}
+
+
 
 //#include "rutil.cpp"
 #endif //RUTIL_H

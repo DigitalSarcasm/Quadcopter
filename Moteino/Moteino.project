@@ -157,42 +157,20 @@
   <Dependencies Name="Debug"/>
   <Dependencies Name="Release"/>
   <VirtualDirectory Name="Tests">
+    <VirtualDirectory Name="VarTests">
+      <VirtualDirectory Name="varrec">
+        <File Name="Tests/VarTests/varrec/varrec.ino"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="varsend">
+        <File Name="Tests/VarTests/varsend/varsend.ino"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
     <VirtualDirectory Name="rutilstests">
       <VirtualDirectory Name="rutiltest">
         <File Name="Tests/rutilstests/rutiltest/rutil.cpp"/>
         <File Name="Tests/rutilstests/rutiltest/rutil.h"/>
         <File Name="Tests/rutilstests/rutiltest/rutiltest.ino"/>
       </VirtualDirectory>
-      <File Name="Tests/rutilstests/rutilstest.cpp"/>
-      <File Name="Tests/rutilstests/rutilstest.exe"/>
-    </VirtualDirectory>
-    <VirtualDirectory Name="mockArduino">
-      <VirtualDirectory Name="gmock">
-        <VirtualDirectory Name="internal">
-          <File Name="Tests/mockArduino/gmock/internal/gmock-generated-internal-utils.h"/>
-          <File Name="Tests/mockArduino/gmock/internal/gmock-generated-internal-utils.h.pump"/>
-          <File Name="Tests/mockArduino/gmock/internal/gmock-internal-utils.h"/>
-          <File Name="Tests/mockArduino/gmock/internal/gmock-port.h"/>
-        </VirtualDirectory>
-        <File Name="Tests/mockArduino/gmock/gmock-actions.h"/>
-        <File Name="Tests/mockArduino/gmock/gmock-cardinalities.h"/>
-        <File Name="Tests/mockArduino/gmock/gmock-generated-actions.h"/>
-        <File Name="Tests/mockArduino/gmock/gmock-generated-actions.h.pump"/>
-        <File Name="Tests/mockArduino/gmock/gmock-generated-function-mockers.h"/>
-        <File Name="Tests/mockArduino/gmock/gmock-generated-function-mockers.h.pump"/>
-        <File Name="Tests/mockArduino/gmock/gmock-generated-matchers.h"/>
-        <File Name="Tests/mockArduino/gmock/gmock-generated-matchers.h.pump"/>
-        <File Name="Tests/mockArduino/gmock/gmock-generated-nice-strict.h"/>
-        <File Name="Tests/mockArduino/gmock/gmock-generated-nice-strict.h.pump"/>
-        <File Name="Tests/mockArduino/gmock/gmock-matchers.h"/>
-        <File Name="Tests/mockArduino/gmock/gmock-more-actions.h"/>
-        <File Name="Tests/mockArduino/gmock/gmock-more-matchers.h"/>
-        <File Name="Tests/mockArduino/gmock/gmock-spec-builders.h"/>
-        <File Name="Tests/mockArduino/gmock/gmock.h"/>
-      </VirtualDirectory>
-      <File Name="Tests/mockArduino/Ardui-mock.url"/>
-      <File Name="Tests/mockArduino/arduino.cpp"/>
-      <File Name="Tests/mockArduino/Arduino.h"/>
     </VirtualDirectory>
     <VirtualDirectory Name="simpleServerClient">
       <VirtualDirectory Name="simpleClient">
@@ -227,5 +205,8 @@
   <VirtualDirectory Name="Contrib">
     <File Name="Contrib/rutil.h"/>
     <File Name="Contrib/rutil.cpp"/>
+  </VirtualDirectory>
+  <VirtualDirectory Name="Moteino">
+    <File Name="Moteino.project"/>
   </VirtualDirectory>
 </CodeLite_Project>

@@ -177,6 +177,8 @@ bool RFM69::canSend()
   return false;
 }
 
+
+//i made this, ignore
 bool RFM69::activity(){
 	return (readRSSI() > CSMA_LIMIT);
 }

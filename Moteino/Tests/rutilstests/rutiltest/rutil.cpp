@@ -34,37 +34,83 @@ unsigned long Timer::getTime(){
 
 //constructor for empty packet object
 Packet::Packet(){
-	overhead = 0;
 //	for(int i=0; i<PACKETSIZE; i++)
 //		data[i]=0;
+	data[0] = 0;	//overhead
 	dataLength = 0;
 	priority = 0;
 }
 
 //constructor for Packet with prebuilt overhead byte
-Packet::Packet(const byte& overhead, byte* data, const byte& dataLength, const byte& priority){
-	this->overhead = overhead;
-	for(int i=0; i<dataLength; i++)
-		this->data[i] = data[i];
-	this->dataLength = dataLength;
+Packet::Packet(const byte& overhead, byte* cdata, const byte& dataLength, const byte& priority){
+	data[0] = overhead;
+	for(int i=1; i<=dataLength; i++) //copy into data packet index 1 to 60 (60bytes)
+		this->data[i] = cdata[i-1];
+	this->dataLength = dataLength;	//including overhead
 	this->priority = priority;
 }
 
 //constructor for Packet that builds overhead byte
-Packet::Packet(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority){
-	this->overhead = makeOverhead(ptype, meta);
-	for(int i=0; i<dataLength; i++)
-		this->data[i] = data[i];
+Packet::Packet(const byte& ptype, const byte& meta, byte* cdata, const byte& dataLength, const byte& priority){
+	data[0] = makeOverhead(ptype, meta);
+	for(int i=1; i<=dataLength; i++) 
+		this->data[i] = cdata[i-1];
 	this->dataLength = dataLength;
 	this->priority = priority;
 }
 
+//copy constructor
+Packet::Packet(const Packet& p){
+	dataLength = p.dataLength;
+	priority = p.priority;
+	//copy all data, including overhead
+	for(int i=0; i<dataLength+1; i++)	//as the overhead is not accounted for in the datalength
+		data[i] = p.data[i];
+}
+
+void Packet::operator=(const Packet& p){
+	if(this == &p)
+		return;
+	
+	dataLength = p.dataLength;
+	priority = p.priority;
+	
+	for(int i=0; i<dataLength+1; i++)
+		data[i] = p.data[i];
+}
+
+bool Packet::operator==(const Packet& p){
+	if(this == &p)
+		return true;
+	
+	//specical case, the packet is removed from use and its overhead is set to 0 but its other data is not changed
+	//this packet is now a empty packet and must only check the overhead
+	if(data[0] == 0 && p.data[0] == 0)
+		return true;
+	
+	if(data[0] != p.data[0] || dataLength != p.dataLength || priority != p.priority)
+		return false;
+	
+	//checks the first x amount of bytes in the data to see if the data is the same
+	for(int i=1; i< DATACHECK; i++){
+		if(data[i] != p.data[i])
+			return false;
+	}
+	
+	return true;
+}
+
 //return data array in packet
 byte* Packet::getData(){
+	return data+1;
+}
+
+//returns databuffer with overhead
+byte* Packet::getPacket(){
 	return data;
 }
 
-//copies data array from packet into another array
+//copies data array from packet into another array    	NOT TESTED
 //Must state the segment of the original data array to copy, size cannot be larget than original array
 byte Packet::getData(byte* buffer, const byte& size){
 	if(size > dataLength)
@@ -76,24 +122,24 @@ byte Packet::getData(byte* buffer, const byte& size){
 }
 
 //Sets the data array in packet, changes the size variable
-byte Packet::setData(byte* data, const byte& size){
-	if(size > dataLength)
+byte Packet::setData(byte* cdata, const byte& size){
+	if(size > PACKETSIZE-1)
 		return 0;
 	
-	for(int i=0; i< size; i++)
-		this->data[i] = data[i];
+	for(int i=1; i<=size; i++)
+		this->data[i] = cdata[i-1];
 	this->dataLength = size;
 	return 1;
 }
 
 //returns overhead byte in packet
 byte Packet::getOverhead(){
-	return overhead;
+	return data[0];
 }
 
 //sets overhead byte in packet using pre-build overhead byte
 void Packet::setOverhead(const byte& overhead){
-	this->overhead = overhead;
+	data[0] = overhead;
 }
 
 //sets overhead byte in packet using type and meta
@@ -101,13 +147,13 @@ byte Packet::setOverhead(const byte& ptype, const byte& meta){
 	if( (ptype > TYPES -1) || (meta > METAS -1))
 		return 0;
 		
-	this->overhead = makeOverhead(ptype, meta);
+	data[0] = makeOverhead(ptype, meta);
 	return 1;
 }
 
 //returns type of the packet (using the overhead byte)
 byte Packet::getType(){
-	return getPacketType(overhead);
+	return getPacketType(data[0]);
 }
 
 //sets type of the overhead byte, keeps the meta data
@@ -116,14 +162,14 @@ byte Packet::setType(byte ptype){
 	if(ptype > TYPES-1)
 		return 0;
 	ptype = ptype << 5;	//new type bits
-	overhead = overhead & B00011111; //mask old type bits
-	overhead = overhead | ptype;	//add new type bits to ovehead
+	data[0] = data[0] & B00011111; //mask old type bits
+	data[0] = data[0] | ptype;	//add new type bits to ovehead
 	return 1;
 }
 
 //returns meta of the packet (using the overhead byte)
 byte Packet::getMeta(){
-	return getPacketMeta(overhead);
+	return getPacketMeta(data[0]);
 }
 
 //sets the meta of the overhead byte, keeps the type data
@@ -131,8 +177,8 @@ byte Packet::setMeta(byte meta){
 	//check if meta is only the first 5 bits set (0->31)
 	if(meta > METAS-1)
 		return 0;
-	overhead = overhead & B11100000; //mask last meta bits
-	overhead = overhead | meta;	//add new meta bits
+	data[0] = data[0] & B11100000; //mask last meta bits
+	data[0] = data[0] | meta;	//add new meta bits
 	return 1;
 }
 
