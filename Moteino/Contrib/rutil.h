@@ -18,14 +18,16 @@
 #define EPACKET 0
 #define REQPACKET 1
 #define DPACKET 2
-#define LOGPACKET 6
+#define HPACKET 6
 #define EMGPACKET 7
 
 //metas
 //request packet
 #define HSREQ 0
-#define TXREQ 1
-
+#define REQREQ 1
+#define TXREQ 2
+#define NOREQ 3
+#define DREQ 4	//data request
 
 
 
@@ -70,6 +72,7 @@ public:
 	
 	byte length(){return dataLength;}	//return length of data buffer
 	byte plength(){return dataLength+1;}	//returns length of data buffer + overhead
+	byte setLength(const byte& len);
 	
 	byte getOverhead();	//get overhead byte
 	void setOverhead(const byte& overhead);	//not tested //set overhead byte
@@ -91,7 +94,7 @@ public:
 
 //PacketQueue
 //Array list that behaves like linked list
-//the packets are stored in the collection in a FIFO order but the lookup table to them can be changed easily (byte array)
+//the packets are stored in the collection in a random order but the lookup table to them can be changed easily (byte array)
 //the lookup table on the otherhand is a circular list
 //this is because changing the order of packets is heavy compared to changing the order in the lookuptable
 template<int arraySize=QUEUESIZE>
@@ -110,10 +113,13 @@ public:
 	void operator=(const PacketQueue& pq);
 	
 	byte queue(const Packet& pack);
+	Packet* queueDummy();
 	byte queue(const byte& ptype, const byte& meta, byte* data, const byte& dataLength, const byte& priority = 0);
 	Packet dequeue();
 	
 	byte length(){return size;}
+	byte full(){return (size == maxSize);}
+	Packet& peek(){return collection[lookup[head]];}
 	
 	//TODO
 	//void smartQueue(); //compares packets from multiple clients and arranges the packets as to 
@@ -130,7 +136,7 @@ protected:
 public:
 	ClientList();
 	
-	byte lenght(){return size;}
+	byte length(){return size;}
 	
 	byte getClient(const byte& index);
 	byte getRequest(const byte& index);
@@ -214,6 +220,27 @@ byte PacketQueue<ARRAYSIZE>::queue(const Packet& pack){
 	
 	size++;
 	return 1;
+}
+
+//queues empty packet and returns a reference to it
+//this leaves the responsibility of filling up the packet to the user
+//this allows to queue up packets without the need for temporary packet objects
+//returns 1 for success, else it returns 0
+template<int ARRAYSIZE>
+Packet* PacketQueue<ARRAYSIZE>::queueDummy(){
+	if(head == tail && size != 0) //if the lookup table is full
+		return 0;
+
+	byte index = findEmpty();	//find empty index in queue
+	
+	collection[index] = Packet(0,1,0,0,0);	//copy in packet with a 1 overhead
+	lookup[tail] = index;		//add index to lookup table
+	tail++;						
+	if(tail >= maxSize)			//compute next tail position
+		tail = tail % maxSize;
+	
+	size++;
+	return &collection[index]; //return pointer to dummy
 }
 
 template<int ARRAYSIZE>

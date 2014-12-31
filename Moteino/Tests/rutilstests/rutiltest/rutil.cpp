@@ -132,6 +132,12 @@ byte Packet::setData(byte* cdata, const byte& size){
 	return 1;
 }
 
+byte Packet::setLength(const byte& len){
+	if(len > PACKETSIZE-1)
+		return 0;
+	this->dataLength = len;
+}
+
 //returns overhead byte in packet
 byte Packet::getOverhead(){
 	return data[0];
@@ -198,7 +204,7 @@ byte Packet::makeOverhead(const byte& ptype, byte meta){
 	byte overhead = B00000000;
 	
 	if((ptype > TYPES-1) || (meta > METAS-1) )
-		return EMPTYPACKET;
+		return EPACKET;
 	
 	overhead = overhead | ptype;	//get type bits
 	overhead = overhead << 5;		//shift type bits

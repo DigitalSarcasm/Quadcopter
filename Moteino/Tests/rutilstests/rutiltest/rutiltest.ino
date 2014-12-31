@@ -319,27 +319,60 @@ test(packetqueue_cycle_queue){
 	assertEqual(q.dequeue().getType(), QUEUESIZE/2);
 }
 
+test(packetqueue_peek){
+	Packet p1(1, 20, 0,0,0);
+	Packet p2(6, 12, 0, 0, 0);
+	
+	PacketQueue<> q;
+	q.queue(p1);
+	q.queue(p2);
+	
+	assertEqual(q.length(), 2);
+	assertEqual(q.peek().getOverhead(), p1.getOverhead());
+	q.dequeue();
+	assertEqual(q.length(), 1);
+	assertEqual(q.peek().getOverhead(), p2.getOverhead());
+}
+
+test(packetqueue_dummy){
+	Packet p1(1,20,0,0,0);
+	PacketQueue<> q;
+	Packet* dummy = q.queueDummy();
+	
+	assertNotEqual((long)dummy, 0);
+	assertEqual(q.length(), 1);
+	
+	assertEqual(q.peek().getOverhead(), Packet::makeOverhead(0,1));
+	
+	dummy->setOverhead(p1.getOverhead());
+	
+	assertEqual(q.peek().getOverhead(), p1.getOverhead());
+	
+}
+
+////////clientList tests
+
 test(clientlist_add_remove){
 	ClientList<> cl;
-	assertEqual(cl.lenght(), 0);
+	assertEqual(cl.length(), 0);
 	
 	cl.add(5);
-	assertEqual(cl.lenght(), 1);
+	assertEqual(cl.length(), 1);
 	assertEqual(cl.getClient(0), 5);
 	
 	cl.add(6);
-	assertEqual(cl.lenght(), 2);
+	assertEqual(cl.length(), 2);
 	assertEqual(cl.getClient(0), 5);
 	assertEqual(cl.getClient(1), 6);
 	
 	cl.remove(5);
 	
-	assertEqual(cl.lenght(), 1);
+	assertEqual(cl.length(), 1);
 	assertEqual(cl.getClient(0), 6);
 	
 	cl.add(5);
 	cl.toggleRequest(1);
-	assertEqual(cl.lenght(), 2);
+	assertEqual(cl.length(), 2);
 	assertEqual(cl.getClient(1), 5);
 	assertEqual(cl.getClient(0), 6);
 	assertEqual(cl.getRequest(1), true);

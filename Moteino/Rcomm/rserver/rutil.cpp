@@ -132,6 +132,12 @@ byte Packet::setData(byte* cdata, const byte& size){
 	return 1;
 }
 
+byte Packet::setLength(const byte& len){
+	if(len > PACKETSIZE-1)
+		return 0;
+	this->dataLength = len;
+}
+
 //returns overhead byte in packet
 byte Packet::getOverhead(){
 	return data[0];
