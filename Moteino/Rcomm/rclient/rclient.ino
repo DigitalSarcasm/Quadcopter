@@ -113,7 +113,7 @@ void processing(){
 			if(roll == 1){
 				//then add to the outq
 				Packet* p = outq.queueDummy();
-				p->setOverhead(rand() % 7);
+				p->setOverhead(DPACKET);
 				for(int i=0; i<30; i++)
 					p->getData()[i] = i;
 				p->setLength(30);
@@ -122,6 +122,8 @@ void processing(){
 	}
 }
 
+//handles queries from the server. The server may query for requests from the client,
+	//may request data from the host or start transmitting data to client.
 byte query(){
 	//make sure that the client is always on rx mode unless it is transmitting
 	phaset.start();
@@ -131,32 +133,36 @@ byte query(){
 			//check packet type
 			Packet p((byte)radio.DATA[0], (byte*)radio.DATA+1, (byte)radio.DATALEN-1);	//make packet
 			
+			//requests:
 			if(p.getType() == REQPACKET){
-				//requests:
+				//if the packet type is a request-request, check outqueue for any packets to send.
 				if(p.getMeta() == REQREQ){
-					//if the packet type is a request-request, check outqueue for any packets to send.
 					//if so, create a request packet for the packet (as it may be multiple data consecutive packets)
 					if(outq.length() > 0){//currently doesn't check the number of packets needed to be sent as the consecutive packets are not created con
-						Packet p(REQPACKET, NOREQ, 0,0,0);
+						Packet p(REQPACKET, TXREQ, 0,0,0);
+						p.setData(&NODEID, 1);	//add node id as data to the packet
+						//send tx request
 						radio.sendWithRetry(SERVERID, p.getPacket(), p.plength());
-						Serial.println("working");
 					}
 				}
+				//data request packet, this will be sent to the host
 				else if(p.getMeta() == DREQ){
 					//if the packet type is a data-request, create packet in inqueue
 				}
+				//data transmission packet, the server is allowing transmissions to it 
 				else if(p.getMeta() == TXREQ){
 					//request acknowlegement
 					//send packet to transmission function
 				}
 			
 			}
+			//data packet, the server is transmitting packets to the client
 			else if(p.getType() == DPACKET){
 				//data reception:
 				//if the packet is a data transmission, send it to the reception function
 			}
 			else{
-				Serial.println("UNRECOGNIZED PACKET RECEIVED IN QUERY()");	//TODEL
+				Serial.println("UNRECOGNIZED PACKET RECEIVED IN QUERY(), overhead: "); Serial.println(radio.DATA[0]);//TODEL
 			}
 		}
 	}

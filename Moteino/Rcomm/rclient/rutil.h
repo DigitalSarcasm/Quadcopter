@@ -29,6 +29,9 @@
 #define NOREQ 3
 #define DREQ 4	//data request
 
+//data packet
+#define DCNTMAX 15 //data counter max value
+
 
 
 ////////////Timer object declaration
@@ -119,7 +122,11 @@ public:
 	
 	byte length(){return size;}
 	byte full(){return (size == maxSize);}
-	Packet& peek(){return collection[lookup[head]];}
+	Packet* peek(){return &collection[lookup[head]];}
+	Packet* peek(const byte& index);	
+	byte rollover();	
+	
+//	byte consecDataPackets();	
 	
 	//TODO
 	//void smartQueue(); //compares packets from multiple clients and arranges the packets as to 
@@ -266,7 +273,62 @@ Packet PacketQueue<ARRAYSIZE>::dequeue(){
 	return temp;
 }
 
-//////////////ClientList
+//peeks the Nth item in the queue, returns Empty Packet if the index is bigger than the size of the queue
+template<int ARRAYSIZE>
+Packet* PacketQueue<ARRAYSIZE>::peek(const byte& index){
+	if(index > size || size == 0)
+		return 0;
+		
+	return &collection[lookup[(head+index)%maxSize]];
+}
+
+template<int ARRAYSIZE>
+byte PacketQueue<ARRAYSIZE>::rollover(){
+	if(size == 0)
+		return 0;
+		
+	byte index = lookup[head];
+	head++;
+	if(head >= maxSize)
+		head = head % maxSize;
+	lookup[tail] = index;
+	tail++;
+	if(tail >= maxSize)
+		tail = tail % maxSize;
+	return 1;
+}
+
+//counts the number of consecutive data packets, these is data that has been separated into multiple packets
+//returns 0 if the queue is empty, if the head of the queue is not a data packet
+//else returns the number of consecutive data Packets
+//template<int ARRAYSIZE>
+//byte PacketQueue<ARRAYSIZE>::consecDataPackets(){
+//	int csize = 1;
+//	if(size == 0)
+//		return 0;
+//	
+//	if(collection[lookup[head]].getType() != DPACKET)
+//		return 0;
+//		
+//	//start at 1 as the head of the queue has already been checked 
+//	for(int i=1; i<size; i++){
+//		Packet* p = collection[lookup[head+i]];
+//		//looks for last packet meta. if one is found, the number of packets to it is returned
+//		//else if none is found, then the packet of the group has not been processed yet and 
+//		if(p->getType() == DPACKET){
+//			if(p->getMeta() > DCNTMAX)
+//				break;
+//				
+//		}
+//		else
+//			break;
+//			
+//		csize++;
+//	}
+//	return csize;
+//}
+
+////////////////////////////////ClientList
 
 template<int ARRAYSIZE>
 ClientList<ARRAYSIZE>::ClientList(){

@@ -75,6 +75,9 @@ byte handshake(){
 }
 
 //handles request query phase
+//this phase queries all clients whether they have any data to send and queues up transmission requests from said clients.
+//this functions also confirms that all the clients in the client list are still reachable
+//TODO: handle client that do not reply
 void query(){
 	//query every client in the client list. For every query, wait x amount of time for reply to query
 	//the query must receive a request packet in the timeout time. The client may be queried more than once
@@ -84,7 +87,7 @@ void query(){
 		Packet request(REQPACKET, REQREQ, 0,0,0);
 		Timer timer;
 		bool replied = false;
-		
+		//TODO: CHECK INQ CAPACITY		//SUPER IMPORTANT
 		for(int j=0; j<QUERYRETRY; j++){
 			//send request-request packet
 			radio.send(clist.getClient(i), request.getPacket(), request.plength());
@@ -97,24 +100,25 @@ void query(){
 					//check packet type
 					if(Packet::getPacketType((byte)radio.DATA[0]) == REQPACKET){
 						//check packet meta
-						if(Packet::getPacketMeta((byte)radio.DATA[0]) == REQREQ){	//TODO check if the address of the client is the right client
+						//if the request packet is a transmission packet
+						if(Packet::getPacketMeta((byte)radio.DATA[0]) == TXREQ){	//TODO check if the address of the client is the right client
 							//add reply to input-queue is a request
-							Packet* p = inq.queueDummy();
-							p->setOverhead((byte)radio.DATA[0]);
-							p->setData((byte*)radio.DATA+1, (byte)(radio.DATALEN-1));	//get data without overhead and substract the overhead from the datalen. also this sets the datalength
-							if(radio.ACKRequested())
+							Packet* p = inq.queueDummy();	//create dummy packet
+							p->setOverhead((byte)radio.DATA[0]);	//set its overhead
+							p->setData((byte*)radio.DATA+1, (byte)(radio.DATALEN-1));	//set data without overhead and substract the overhead from the datalen. also this sets the datalength of the packet
+							if(radio.ACKRequested())	//send ack if requested
 								radio.sendACK();
 							replied = true;	//the client has a request
 						}
+						//if the request packet is a norequest packet
 						else if(Packet::getPacketMeta((byte)radio.DATA[0]) == NOREQ){
 							if(radio.ACKRequested())
 								radio.sendACK();
-							replied = true;	//the client has a request
-							Serial.println("working");
+							replied = true;	//the client has replied and has no request
 						}
 					}
 					else{
-						Serial.print("received unexpected Packet, overhead: "); Serial.println(radio.DATA[0]);	//TODEL
+						Serial.print("UNRECOGNIZED PACKET RECEIVED IN QUERY(), overhead: "); Serial.println(radio.DATA[0]);	//TODEL
 					}
 				}
 			}

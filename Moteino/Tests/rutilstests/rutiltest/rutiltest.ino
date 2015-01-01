@@ -288,6 +288,55 @@ test(packetqueue_queue_dequeue_data){
 //	
 //}
 
+test(packetqueue_peek){
+	Packet p1(1, 20, 0,0,0);
+	Packet p2(6, 12, 0, 0, 0);
+	
+	PacketQueue<> q;
+	q.queue(p1);
+	q.queue(p2);
+	
+	assertEqual(q.length(), 2);
+	assertEqual(q.peek()->getOverhead(), p1.getOverhead());
+	assertEqual(q.peek(0)->getOverhead(), p1.getOverhead());
+	assertEqual(q.peek(1)->getOverhead(), p2.getOverhead());
+	q.dequeue();
+	assertEqual(q.length(), 1);
+	assertEqual(q.peek()->getOverhead(), p2.getOverhead());
+	assertEqual(q.peek(0)->getOverhead(), p2.getOverhead());
+	
+	for(int i=0; i<QUEUESIZE-1; i++){
+		q.queue(Packet(i, 0, 0));
+	}
+	assertEqual(q.length(), QUEUESIZE);
+	q.dequeue();
+	q.dequeue();	//to make the lookup table rollover on the array
+	byte t0, t1;
+	t0 = q.peek(0)->getOverhead();
+	t1 = q.peek(1)->getOverhead();
+	assertEqual(t0, q.dequeue().getOverhead());
+	assertEqual(t1, q.dequeue().getOverhead());
+}
+
+test(packetqueue_rollover){
+	PacketQueue<> q;
+	PacketQueue<> r;
+	
+	for(int i=0; i<QUEUESIZE;i++){
+		q.queue(Packet(i, 0, 0));
+	}
+	r.queue(Packet(1, 0, 0));
+	assertEqual(r.length(), 1);
+	r.rollover();
+	assertEqual(r.length(), 1);
+	r.queue(Packet(2, 0, 0));
+	assertEqual(r.peek()->getOverhead(), 1);
+	r.rollover();
+	assertEqual(r.length(), 2);
+	assertEqual(r.peek()->getOverhead(), 2);
+	assertEqual(r.peek(1)->getOverhead(), 1);
+}
+
 test(packetqueue_overfill_queue){
 	PacketQueue<> q;
 	
@@ -319,21 +368,6 @@ test(packetqueue_cycle_queue){
 	assertEqual(q.dequeue().getType(), QUEUESIZE/2);
 }
 
-test(packetqueue_peek){
-	Packet p1(1, 20, 0,0,0);
-	Packet p2(6, 12, 0, 0, 0);
-	
-	PacketQueue<> q;
-	q.queue(p1);
-	q.queue(p2);
-	
-	assertEqual(q.length(), 2);
-	assertEqual(q.peek().getOverhead(), p1.getOverhead());
-	q.dequeue();
-	assertEqual(q.length(), 1);
-	assertEqual(q.peek().getOverhead(), p2.getOverhead());
-}
-
 test(packetqueue_dummy){
 	Packet p1(1,20,0,0,0);
 	PacketQueue<> q;
@@ -342,11 +376,11 @@ test(packetqueue_dummy){
 	assertNotEqual((long)dummy, 0);
 	assertEqual(q.length(), 1);
 	
-	assertEqual(q.peek().getOverhead(), Packet::makeOverhead(0,1));
+	assertEqual(q.peek()->getOverhead(), Packet::makeOverhead(0,1));
 	
 	dummy->setOverhead(p1.getOverhead());
 	
-	assertEqual(q.peek().getOverhead(), p1.getOverhead());
+	assertEqual(q.peek()->getOverhead(), p1.getOverhead());
 	
 }
 

@@ -121,7 +121,7 @@ byte Packet::getData(byte* buffer, const byte& size){
 	return 1;
 }
 
-//Sets the data array in packet, changes the size variable
+//Sets the data array in packet, sets the packet size as well
 byte Packet::setData(byte* cdata, const byte& size){
 	if(size > PACKETSIZE-1)
 		return 0;
