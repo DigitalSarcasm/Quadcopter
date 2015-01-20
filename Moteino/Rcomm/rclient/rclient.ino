@@ -16,8 +16,23 @@
 #define OUTQUEUE 8
 #define INQUEUE 8
 
+//Processing
 #define PROCTIME 500
+//Query
 #define QUERYTIME 500
+//Transmission
+#define	TRANSMAX 5
+#define TRANSTIMEOUT 80
+#define TRANSACK 80
+#define TRANSRETRY 2
+
+//byte handshake();
+//void processing();
+//byte query();
+//byte transmission(Packet req);
+//void reception();
+//bool activity();
+//void printPacket(Packet p);
 
 byte SERVERID = DEFAULTSERVERID;		
 byte NODEID = 2;		//this should be provided by the server when there are more than one client
@@ -36,6 +51,7 @@ void setup(){
 	
 	radio.initialize(FREQ, NODEID, NETID); //initialze rfm69 radio
 	radio.setHighPower(true);
+	radio.encrypt(0);
 
 	flash.initialize();		//TODO check that this function passes
 	
@@ -138,11 +154,16 @@ byte query(){
 				//if the packet type is a request-request, check outqueue for any packets to send.
 				if(p.getMeta() == REQREQ){
 					//if so, create a request packet for the packet (as it may be multiple data consecutive packets)
-					if(outq.length() > 0){//currently doesn't check the number of packets needed to be sent as the consecutive packets are not created con
-						Packet p(REQPACKET, TXREQ, 0,0,0);
-						p.setData(&NODEID, 1);	//add node id as data to the packet
+					if(outq.length() > 0){//currently doesn't check the number of packets needed to be sent as the consecutive packets are not created from large blocks of data
+						byte data[2];
+						data[0] = NODEID; //add node id as data to the packet
+						if(outq.length() > TRANSMAX)	//set the number of requested packets
+							data[1] = TRANSMAX;
+						else
+							data[1] = outq.length();
+						Packet reqp(REQPACKET, TXREQ, data,2,0);
 						//send tx request
-						radio.sendWithRetry(SERVERID, p.getPacket(), p.plength());
+						radio.sendWithRetry(SERVERID, reqp.getPacket(), reqp.plength());
 					}
 				}
 				//data request packet, this will be sent to the host
@@ -153,6 +174,8 @@ byte query(){
 				else if(p.getMeta() == TXREQ){
 					//request acknowlegement
 					//send packet to transmission function
+					byte sent = transmission(p);
+					//dequeue the packets that have been sent
 				}
 			
 			}
@@ -166,10 +189,60 @@ byte query(){
 			}
 		}
 	}
-	
 }
 
-void transmission(){
+
+byte transmission(Packet req){
+	RFM69 radio; //DELETE
+	Packet req;	//DELETE
+	PacketQueue outq;//DELETE
+	byte counter = 0;
+	
+	//construct packet to be transmitted using the request
+	for(int i=0; i<req.getData()[1]; i++){	//get number of packets to send from the request packet
+		//send the allowed amount of packets
+		if(radio.sendWithRetry(SERVERID, outq.peek()->getPacket(),outq.peek()->plength(), TRANSRETRY,TRANSTIMEOUT)){
+			outq.dequeue();
+			counter++;
+		}
+		delay(10);	//allow some delay for the server to prepare to receive next packet
+	}
+	
+	//return the number of packets sent
+	return counter;
+}
+
+byte transmission(Packet req){
+	PacketQueue outq;	//DELETE
+	RFM69 radio;		//DELETE
+	Packet req;			//DELETE
+	
+	byte packNum = 0;	//packet number generator
+	byte tries = 0;		//number of sends
+	
+	//use peek(with int) function to get packet as we will make sure to save packets if one is missed
+	Packet* p = outq.peek(packNum);
+	//check how much packets is allowed to be sent
+	while(packNum < req.getData()[1] && tries < (req.getData()[0]+TRANSRETRY)){	//limits the retries
+		Timer ackTimer;
+		radio.send(SERVERID, p->getPacket(), p->plength());
+		ackTimer.start();
+		
+		while(ackTimer.getTime() < TRANSACK){
+			if(radio.receiveDone()){
+				if(radio.ACKReceived(SERVERID)){
+					if(radio.DATA[0] == 0)
+						packNum++;
+				}
+			}
+		}
+		tries++;
+	}
+	//set packet number and send packet
+	
+	//wait for reply and check the acked packet number before sending next one
+	
+	//IMPORTANT, HAVE A SLIGHT DELAY TO ALLOW SERVER TO CHECK THE RECEIVED PACKET
 	
 }
 
@@ -182,7 +255,7 @@ bool activity(){
 	return (radio.readRSSI() > CSMA_LIMIT);
 }
 
-//testing
+//for testing
 void printPacket(Packet p){
 	Serial.println();
 	Serial.print("overhead:"); Serial.println(p.getOverhead(), BIN);

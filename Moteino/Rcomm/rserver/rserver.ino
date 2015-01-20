@@ -17,9 +17,15 @@
 #define OUTQUEUE 8
 #define INQUEUE 8
 
+//handshaking
 #define HSTIMEOUT 300 //handshaking timeout
+//Query
 #define QUERYTIMEOUT 80 //query timeout
 #define QUERYRETRY 2	//number of query attempts
+//Reception
+#define RECEPRETRY 2
+#define RECEPTIMEOUT 80
+#define	RECEPMAX 5	//max number of packets the client is allowed to send
 
 #define DEFAULTCLIENT 2
 
@@ -41,6 +47,7 @@ void setup(){
 	
 	radio.initialize(FREQ, NODEID, NETID); //initialze rfm69 radio
 	radio.setHighPower(true);
+	radio.encrypt(0);
 	
 	flash.initialize();	//		TODO check that this function passes
 	
@@ -51,6 +58,9 @@ void setup(){
 
 void loop(){
 	query();
+	reception();
+	processing();
+//	transmission();
 }
 
 //handles handshaking phase
@@ -87,23 +97,23 @@ void query(){
 		Packet request(REQPACKET, REQREQ, 0,0,0);
 		Timer timer;
 		bool replied = false;
-		//TODO: CHECK INQ CAPACITY		//SUPER IMPORTANT
+		//TODO: CHECK INQ/OUTQ CAPACITY		//SUPER IMPORTANT
 		for(int j=0; j<QUERYRETRY; j++){
 			//send request-request packet
 			radio.send(clist.getClient(i), request.getPacket(), request.plength());
 			timer.start();	//start query timer
 			
 			//wait for a request or an empty packet as reply, try RETRY amount of times
-			//if no reply is given, then the client is added to list for connection confirmation
-			while(timer.getTime() < QUERYTIMEOUT){
+			//if no reply is given, then the client is added to list for connection re-confirmation
+			while(timer.getTime() < QUERYTIMEOUT && !replied){
 				if(radio.receiveDone()){
 					//check packet type
 					if(Packet::getPacketType((byte)radio.DATA[0]) == REQPACKET){
 						//check packet meta
 						//if the request packet is a transmission packet
 						if(Packet::getPacketMeta((byte)radio.DATA[0]) == TXREQ){	//TODO check if the address of the client is the right client
-							//add reply to input-queue is a request
-							Packet* p = inq.queueDummy();	//create dummy packet
+							//add reply to output-queue as it is a request
+							Packet* p = outq.queueDummy();	//create dummy packet
 							p->setOverhead((byte)radio.DATA[0]);	//set its overhead
 							p->setData((byte*)radio.DATA+1, (byte)(radio.DATALEN-1));	//set data without overhead and substract the overhead from the datalen. also this sets the datalength of the packet
 							if(radio.ACKRequested())	//send ack if requested
@@ -133,13 +143,105 @@ void query(){
 }
 
 //handles data reception phase
+//currently only receives one packet at a time from a client, should implement the multiple packet method
+/*void reception(){
+//	//cycle through requests while there are requests in the output queue and there is space in the input queue for data
+//	for(int i=0; (i<outq.length() && !inq.full()); i++){
+//		Packet* p = outq.peek();
+//		Timer receptimer;
+//		//bool replied = false;
+//		byte replied = 0;
+//		
+//		if(p->getData()[1] > (inq.maxLength() - inq.length()))	//check there is space for the number of request transmissions, if not, trim the number
+//			p->getData()[1] = (inq.maxLength() - inq.length())	//if there isn't, trim the number of allowed packets
+//		
+//		for(int j=0; (j<RECEPRETRY && replied != p->getData()[1]); j++){	//retry request if the number of packets have not been sent. This loop runs once if all the packets have been received else, it tries RECEPRETRY time to receive the remaining packets
+//			//send back TXrequest to client
+//			byte left = p->getData()[1] - replied;	//check for any sent packets (if this is a retry)
+//			radio.send(p->getData()[0],p->getPacket(), p->plength());
+//			receptimer.start();
+//			
+//			//allow all packets to be sent (by multiplying 1 packet recept time * # of packets remaining)
+//			while(receptimer.getTime()  < (RECEPTIMEOUT * left) && replied != p->getData()[1]){	//wait all replies reply
+//			//if received, add data packet to input queue
+//				if(radio.receiveDone()){
+//					Packet* p = inq.queueDummy();
+//					p->setOverhead((byte)radio.DATA[0]);
+//					p->setData((byte*)radio.DATA+1, (byte)radio.DATALEN-1);
+//					
+//					if(radio.ACKRequested())
+//						radio.sendACK();
+//					
+//					replied++;
+//					//outq.dequeue();	//remove txrequest from the outq
+//				}
+//			}
+//		}
+//		//if all the packets were not received, rollover the packet
+//		if(replied < p->getData()[1]){
+//			outq.rollover();	//rollover the txrequest. 
+//		}
+//	}
+}*/
+
+//sends the request and wait for the packets to be sent. The packets use packet numbers in their meta to keep track of which is being received
+//At this point, the output is full of requests
+//the number of packets that can be received is based off the allowed max as well as the space in the input queue
+//the number of packets to be received will be kept track of, not all may be received due to desync of server and client
+//the function is limited by tries, where each try waits for the client to send the data, else a try is lost
+//If the packet number does not match the packet number expected, a negative Ack is sent
+//the request is sent back if the client does not reply with the first packet (number 0)
 void reception(){
-	
+	//cycle through requests while there are requests in the output queue and there is space in the input queue for data
+	while(outq.length() > 0 && !inq.full()){
+		Packet* req = outq.peek();
+		byte packNum = 0;	//used to check packet number
+		byte tries = 0;
+		Timer time;
+		
+		if(req->getData()[1] > (inq.maxLength() - inq.length()))	//check there is space for the number of request transmissions, if not, trim the number
+			req->getData()[1] = (inq.maxLength() - inq.length())	//if there isn't, trim the number of allowed packets
+		
+		while(packNum < req->getData()[1] && tries < (req->getData()[1] + RECEPRETRY)){
+			//send tx request
+			if(packNum == 0)	//only send request first time, in case its missed, will resend
+				radio.send(req->getData()[0], req->getPacket(), req->plength());
+				
+			time.start();
+			
+			//wait for reply. The reply's packet number must match the counter
+			//wait x amount of time for reply or failure
+			while(time.getTime() < RECEPTIMEOUT){
+				if(radio.receiveDone()){
+					//temporarily save packet and check its validity
+					Packet recPacket((byte)radio.DATA[0], (byte*)radio.DATA+1, (byte)radio.DATALEN-1);
+					
+					//if the packet is valid, send ack with acceptance byte
+					if(recPacket.getMeta() == packNum){
+						byte ackData[1] = {1};
+						radio.sendACK(ackData, sizeof(ackData));
+						inq.queue(recPacket);
+						packNum++;
+					}
+					//else, send ACK with denial byte and the packet number needed
+					else{
+						byte ackData[2] = {0, packNum};
+						radio.sendACK(ackData, sizeof(ackData));
+					}
+				}
+			}
+			tries++;
+		}
+	}
 }
 
-//handles processing stage
+//handles processing stage (stub function)
+//check outq for any remaining txrequests, try to re-handshake those clients and dequeue the requests (they will be requeued during the next query phase)
 void processing(){
-	
+	//currently the processing function just dequeues the packets and prints them
+	while(inq.length()>0){
+		printPacket(inq.dequeue());
+	}
 }
 
 //handles data transmission phase
@@ -150,4 +252,15 @@ void transmission(){
 //not tested
 bool activity(){
 	return (radio.readRSSI() > CSMA_LIMIT);
+}
+
+void printPacket(Packet p){
+	Serial.println();
+	Serial.print("overhead:"); Serial.println(p.getOverhead(), BIN);
+	Serial.print("data length: "); Serial.print(p.length()); Serial.print(" data: ");
+	for(int i=0; i<p.length(); i++)
+		Serial.print(p.getData()[i], DEC);Serial.print(" ");
+	Serial.println();
+//	Serial.print("priority: "); Serial.println(p.getPriority());
+//	Serial.println();
 }

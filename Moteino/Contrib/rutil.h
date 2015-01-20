@@ -121,6 +121,7 @@ public:
 	Packet dequeue();
 	
 	byte length(){return size;}
+	byte maxLength(){return maxSize;}
 	byte full(){return (size == maxSize);}
 	Packet* peek(){return &collection[lookup[head]];}
 	Packet* peek(const byte& index);	
