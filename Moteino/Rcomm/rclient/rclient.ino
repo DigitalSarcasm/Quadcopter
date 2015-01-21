@@ -22,8 +22,7 @@
 #define QUERYTIME 500
 //Transmission
 #define	TRANSMAX 5
-#define TRANSTIMEOUT 80
-#define TRANSACK 80
+#define ACKTIMEOUT 80
 #define TRANSRETRY 2
 
 //byte handshake();
@@ -61,11 +60,6 @@ void setup(){
 
 void loop(){
 	processing();
-
-//	if(radio.receiveDone()){
-//		Packet p((byte)radio.DATA[0], (byte*)radio.DATA+1, (byte)radio.DATALEN-1);
-//		printPacket(p);
-//	}
 	query();
 }
 
@@ -129,7 +123,8 @@ void processing(){
 			if(roll == 1){
 				//then add to the outq
 				Packet* p = outq.queueDummy();
-				p->setOverhead(DPACKET);
+				p->setType(DPACKET);
+				p->setMeta(0);
 				for(int i=0; i<30; i++)
 					p->getData()[i] = i;
 				p->setLength(30);
@@ -169,13 +164,16 @@ byte query(){
 				//data request packet, this will be sent to the host
 				else if(p.getMeta() == DREQ){
 					//if the packet type is a data-request, create packet in inqueue
+					Serial.println("wrong meta in query");	//TODEL
 				}
 				//data transmission packet, the server is allowing transmissions to it 
 				else if(p.getMeta() == TXREQ){
 					//request acknowlegement
 					//send packet to transmission function
 					byte sent = transmission(p);
-					//dequeue the packets that have been sent
+					//dequeue all sent packets
+					for(int i=0; i<sent; i++)
+						outq.dequeue();		
 				}
 			
 			}
@@ -191,7 +189,7 @@ byte query(){
 	}
 }
 
-
+/*
 byte transmission(Packet req){
 	RFM69 radio; //DELETE
 	Packet req;	//DELETE
@@ -210,40 +208,56 @@ byte transmission(Packet req){
 	
 	//return the number of packets sent
 	return counter;
-}
+}*/
 
 byte transmission(Packet req){
-	PacketQueue outq;	//DELETE
-	RFM69 radio;		//DELETE
-	Packet req;			//DELETE
+	//PacketQueue outq;	//DELETE
+	//RFM69 radio;		//DELETE
+	//Packet req;			//DELETE
 	
 	byte packNum = 0;	//packet number generator
 	byte tries = 0;		//number of sends
 	
 	//use peek(with int) function to get packet as we will make sure to save packets if one is missed
 	Packet* p = outq.peek(packNum);
+	
 	//check how much packets is allowed to be sent
-	while(packNum < req.getData()[1] && tries < (req.getData()[0]+TRANSRETRY)){	//limits the retries
+	while(packNum <= req.getData()[1] && tries <= (req.getData()[0]+TRANSRETRY)){	//limits the loop to the number of packets allowed (or the number + retries if some are failures)
 		Timer ackTimer;
+		
+		p->setMeta(packNum);	//set packet number
+		
 		radio.send(SERVERID, p->getPacket(), p->plength());
 		ackTimer.start();
+		//Serial.println("packet sent");	//TODEL
 		
-		while(ackTimer.getTime() < TRANSACK){
-			if(radio.receiveDone()){
+		//possibly delay here
+		
+		//wait for reply and check the acked packet number before sending next one
+		while(ackTimer.getTime() < ACKTIMEOUT){	//wait for ACK
+			//if(radio.receiveDone()){
+				//Serial.println("received");
 				if(radio.ACKReceived(SERVERID)){
-					if(radio.DATA[0] == 0)
+					//Serial.println("Ack received");	//TODEL
+					if(radio.DATA[0] == 1){	//the packet was received and the packet number was valid
+						//Serial.println("positive, sending next");	//TODEL
 						packNum++;
+						p = outq.peek(packNum);
+						delay(10);	//delay as the server must save the packet
+					}
+					else if(radio.DATA[0] == 0){ //failure, sent wrong packet. Most likely missed an Ack, change Packet Number
+						//Serial.println("negative, changing packNum");	//TODEL
+						packNum = radio.DATA[1];	//set packet number
+						p = outq.peek(packNum);
+					}
+					
 				}
-			}
+			//}
 		}
-		tries++;
+		tries++;	//keeping track of transmission tries
 	}
-	//set packet number and send packet
 	
-	//wait for reply and check the acked packet number before sending next one
-	
-	//IMPORTANT, HAVE A SLIGHT DELAY TO ALLOW SERVER TO CHECK THE RECEIVED PACKET
-	
+	return packNum;
 }
 
 void reception(){

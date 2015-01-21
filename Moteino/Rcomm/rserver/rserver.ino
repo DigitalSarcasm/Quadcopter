@@ -25,7 +25,6 @@
 //Reception
 #define RECEPRETRY 2
 #define RECEPTIMEOUT 80
-#define	RECEPMAX 5	//max number of packets the client is allowed to send
 
 #define DEFAULTCLIENT 2
 
@@ -200,12 +199,14 @@ void reception(){
 		Timer time;
 		
 		if(req->getData()[1] > (inq.maxLength() - inq.length()))	//check there is space for the number of request transmissions, if not, trim the number
-			req->getData()[1] = (inq.maxLength() - inq.length())	//if there isn't, trim the number of allowed packets
+			req->getData()[1] = (inq.maxLength() - inq.length());	//if there isn't, trim the number of allowed packets
 		
-		while(packNum < req->getData()[1] && tries < (req->getData()[1] + RECEPRETRY)){
+		while(packNum <= req->getData()[1] && tries <= (req->getData()[1] + RECEPRETRY)){
 			//send tx request
-			if(packNum == 0)	//only send request first time, in case its missed, will resend
+			if(packNum == 0){	//only send request first time, in case its missed, will resend
 				radio.send(req->getData()[0], req->getPacket(), req->plength());
+				//Serial.println("request sent");	//TODEL
+			}//TODEL
 				
 			time.start();
 			
@@ -213,11 +214,13 @@ void reception(){
 			//wait x amount of time for reply or failure
 			while(time.getTime() < RECEPTIMEOUT){
 				if(radio.receiveDone()){
+					//Serial.println("received packet"); //TODEL
 					//temporarily save packet and check its validity
 					Packet recPacket((byte)radio.DATA[0], (byte*)radio.DATA+1, (byte)radio.DATALEN-1);
 					
 					//if the packet is valid, send ack with acceptance byte
 					if(recPacket.getMeta() == packNum){
+						//Serial.println("packnumber matches, saving");	//TODEL
 						byte ackData[1] = {1};
 						radio.sendACK(ackData, sizeof(ackData));
 						inq.queue(recPacket);
@@ -225,6 +228,7 @@ void reception(){
 					}
 					//else, send ACK with denial byte and the packet number needed
 					else{
+						//Serial.println("packnumber does not matche, not saving");	//TODEL
 						byte ackData[2] = {0, packNum};
 						radio.sendACK(ackData, sizeof(ackData));
 					}
@@ -232,6 +236,7 @@ void reception(){
 			}
 			tries++;
 		}
+		outq.dequeue();	//dequeue request, even if non of the packets were received
 	}
 }
 
@@ -241,6 +246,7 @@ void processing(){
 	//currently the processing function just dequeues the packets and prints them
 	while(inq.length()>0){
 		printPacket(inq.dequeue());
+		//inq.dequeue();
 	}
 }
 
