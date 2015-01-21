@@ -28,6 +28,7 @@
 #define TXREQ 2
 #define NOREQ 3
 #define DREQ 4	//data request
+#define RECREQ 5	//reception request
 
 //data packet
 #define DCNTMAX 15 //data counter max value

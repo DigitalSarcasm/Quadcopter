@@ -161,7 +161,7 @@ byte query(){
 						radio.sendWithRetry(SERVERID, reqp.getPacket(), reqp.plength());
 					}
 				}
-				//data request packet, this will be sent to the host
+				//TODO data request packet, this will be sent to the host
 				else if(p.getMeta() == DREQ){
 					//if the packet type is a data-request, create packet in inqueue
 					Serial.println("wrong meta in query");	//TODEL
@@ -178,7 +178,7 @@ byte query(){
 			
 			}
 			//data packet, the server is transmitting packets to the client
-			else if(p.getType() == DPACKET){
+			else if(p.getType() == DPACKET){	//change to reception request as to allow the server to state how much packets to send
 				//data reception:
 				//if the packet is a data transmission, send it to the reception function
 			}
@@ -210,49 +210,49 @@ byte transmission(Packet req){
 	return counter;
 }*/
 
+/*
+ * The transmission functions handles the transmission of X amount of packets from the Output queue
+ * The function is called from the query function when the client receives the TX request back from the server when it is in its reception function
+ * The function receives the request from the query function which holds the allowed number of functions to send to the server
+ * The function has X amount of retries to send a packet. The function only sends the next packet if the last packet was ACked
+ * The function might not send all the packets requested due to failures.
+ * 
+ * Returns: number of packets sent
+ */
 byte transmission(Packet req){
-	//PacketQueue outq;	//DELETE
-	//RFM69 radio;		//DELETE
-	//Packet req;			//DELETE
-	
+	//PacketQueue outq;	//TODEL
+	//RFM69 radio;		//TODEL
+	//Packet req;		//TODEL
+	Timer ackTimer;
 	byte packNum = 0;	//packet number generator
-	byte tries = 0;		//number of sends
+	byte tries = 0;		//number of tries
 	
-	//use peek(with int) function to get packet as we will make sure to save packets if one is missed
+	//use peek(with int) function to get packet as we will make sure to save packets if there are retries
 	Packet* p = outq.peek(packNum);
 	
 	//check how much packets is allowed to be sent
 	while(packNum <= req.getData()[1] && tries <= (req.getData()[0]+TRANSRETRY)){	//limits the loop to the number of packets allowed (or the number + retries if some are failures)
-		Timer ackTimer;
-		
 		p->setMeta(packNum);	//set packet number
 		
 		radio.send(SERVERID, p->getPacket(), p->plength());
 		ackTimer.start();
-		//Serial.println("packet sent");	//TODEL
 		
 		//possibly delay here
 		
 		//wait for reply and check the acked packet number before sending next one
 		while(ackTimer.getTime() < ACKTIMEOUT){	//wait for ACK
-			//if(radio.receiveDone()){
-				//Serial.println("received");
-				if(radio.ACKReceived(SERVERID)){
-					//Serial.println("Ack received");	//TODEL
-					if(radio.DATA[0] == 1){	//the packet was received and the packet number was valid
-						//Serial.println("positive, sending next");	//TODEL
-						packNum++;
-						p = outq.peek(packNum);
-						delay(10);	//delay as the server must save the packet
-					}
-					else if(radio.DATA[0] == 0){ //failure, sent wrong packet. Most likely missed an Ack, change Packet Number
-						//Serial.println("negative, changing packNum");	//TODEL
-						packNum = radio.DATA[1];	//set packet number
-						p = outq.peek(packNum);
-					}
-					
+			if(radio.ACKReceived(SERVERID)){
+				if(radio.DATA[0] == 1){	//the packet was received and the packet number was valid
+					packNum++;
+					p = outq.peek(packNum);
+					delay(10);	//delay as the server must save the packet
 				}
-			//}
+				else if(radio.DATA[0] == 0){ //failure, sent wrong packet. Most likely missed an Ack, change Packet Number
+					packNum = radio.DATA[1];	//set packet number
+					p = outq.peek(packNum);
+				}
+				
+			}
 		}
 		tries++;	//keeping track of transmission tries
 	}
