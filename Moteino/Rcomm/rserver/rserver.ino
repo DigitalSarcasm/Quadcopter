@@ -25,6 +25,10 @@
 //Reception
 #define RECEPRETRY 2
 #define RECEPTIMEOUT 80
+//Transmission
+#define	TRANSMAX 5
+#define TRANSRETRY 2
+#define TRANSTIMEOUT 80
 
 #define DEFAULTCLIENT 2
 
@@ -244,14 +248,94 @@ void reception(){
 //check outq for any remaining txrequests, try to re-handshake those clients and dequeue the requests (they will be requeued during the next query phase)
 void processing(){
 	//currently the processing function just dequeues the packets and prints them
-	while(inq.length()>0){
+	while(inq.length() > 0){
 		printPacket(inq.dequeue());
 		//inq.dequeue();
 	}
+	
+	//TODO check outq for any remaining requests. There might still be some as the inq might be full
+	while(outq.length() > 0)
+		printPacket(outq.dequeue());
+		
+	//create packets to send to clients in the outq
 }
 
 //handles data transmission phase
 void transmission(){
+	PacketQueue outq;	//DETLETE
+	RFM69 radio;	//DELETE
+	
+	//loop though output queue until there are no more packets in the queue
+	while(outq.length() > 0){
+		byte currentClient = (*outq.peek()).getData()[0];	//current client id
+		byte consec = 0;	//number of consecutive packets to the same client
+		
+		Packet req(REQPACKET, RECREQ, 0, 0, 0);	//create reception request for specific client
+		
+		byte packNum = 0;	//used to check packet number
+		byte tries = 0;		//number of transmision tries
+		Timer ackTimer;
+		
+		bool responded = false;
+		
+		//loop though output queue and check how much consecutive packets can be sent to the same client
+		for(int i=0; (i<outq.length() && consec <= TRANSMAX); i++){	//limit the number to the max transmission number
+			if(outq.peek()[0] != currentClient)
+				consec++;
+		}
+		
+		{	//set the requested packet number and node id
+			byte data[2] = {NODEID, consec};
+			req.setData(data, 2);
+		}
+		
+		//Main transmission loop
+		while(packNum < req.getData()[1]  && packNum < (req.getData()[1] + TRANSRETRY)){
+			//before the first packet is sent the request must be sent
+			//send request and wait for ACK
+			if(!responded){
+				radio.send(currentClient, req.getPacket(), req.plength());
+				
+				ackTimer.start();	//start timer
+				
+				//wait for ACK
+				while(ackTimer.getTime() < TRANSTIMEOUT){
+					if(radio.ACKReceived(currentClient)){
+						req.getData()[1] = radio.DATA[1];	//get new allowed number of packets from ACK packet
+						responded = true;
+					}
+				}
+			}
+			//if the client has already responded to the request, received data packets
+			//send the specific amount of packets the request states (could be zero)
+			else{
+				Packet* p = outq.peek(packNum);	//get packet to send
+				p.setMeta(packNum);		//set packetNumber
+				
+				radio.send(currentClient, p->getPacket(), p->plength());	//send packet
+				ackTimer.start();	//start timer
+				
+				while(ackTimer.getTime() < TRANSTIMEOUT){
+					if(radio.ACKReceived(currentClient)){
+						if(radio.DATA[0] == 1){	//the packet was received and the packet number was valid
+							packNum++;
+							delay(10);	//delay as the server must save the packet
+						}
+						else if(radio.DATA[0] == 0){ //failure, sent wrong packet. Most likely missed an Ack, change Packet Number
+							packNum = radio.DATA[1];	//set packet number
+						}
+						
+					}
+				}
+			}
+			tries++;
+		}
+		
+		//dequeue all sent packets
+		for(int i=0; i<packNum; i++)
+			outq.dequeue();
+		
+	}
 	
 }
 

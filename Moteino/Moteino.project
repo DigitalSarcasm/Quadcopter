@@ -154,8 +154,6 @@
       </Completion>
     </Configuration>
   </Settings>
-  <Dependencies Name="Debug"/>
-  <Dependencies Name="Release"/>
   <VirtualDirectory Name="Tests">
     <VirtualDirectory Name="VarTests">
       <VirtualDirectory Name="varrec">
@@ -209,4 +207,6 @@
   <VirtualDirectory Name="Moteino">
     <File Name="Moteino.project"/>
   </VirtualDirectory>
+  <Dependencies Name="Debug"/>
+  <Dependencies Name="Release"/>
 </CodeLite_Project>

@@ -24,12 +24,15 @@
 #define	TRANSMAX 5
 #define ACKTIMEOUT 80
 #define TRANSRETRY 2
+//Reception
+#define RECEPTIMEOUT 80
+#define RECEPRETRY 2
 
 //byte handshake();
 //void processing();
 //byte query();
 //byte transmission(Packet req);
-//void reception();
+//void reception(Packet req);
 //bool activity();
 //void printPacket(Packet p);
 
@@ -177,10 +180,11 @@ byte query(){
 				}
 			
 			}
-			//data packet, the server is transmitting packets to the client
-			else if(p.getType() == DPACKET){	//change to reception request as to allow the server to state how much packets to send
+			//reception request packet, the server wants to transmit packets to the client
+			else if(p.getType() == RECREQ){	
 				//data reception:
-				//if the packet is a data transmission, send it to the reception function
+				//if the packet is a reception request, send it to the reception function
+				reception(p);
 			}
 			else{
 				Serial.println("UNRECOGNIZED PACKET RECEIVED IN QUERY(), overhead: "); Serial.println(radio.DATA[0]);//TODEL
@@ -260,7 +264,54 @@ byte transmission(Packet req){
 	return packNum;
 }
 
-void reception(){
+void reception(Packet req){
+	Packet req;		//DELETE
+	PacketQueue outq;
+	PacketQueue inq;
+	RFM69 radio;
+	
+	byte packNum = 0;
+	byte tries = 0;
+	Timer time;
+	
+	//check the request and trim the packet number of there is no space in the input queue
+	if(req.getData()[1] > inq.length())
+		req.getData()[1] = (inq.maxLength() - inq.length());
+	
+	while(packNum < req.getData()[1] && packNum < (req.getData()[1] + RECEPRETRY)){
+		//if its the first packet, send the ACK for the request. This allows the client to send back the request
+		//if the server missed the first ACK
+		if(packNum == 0){
+			//send back the request in an Ack
+			radio.sendACK(req.getPacket(), req.plength());
+		}
+		
+		time.start();
+		
+		//wait to receive the data packets
+		while(time.getTime() < RECEPTIMEOUT){
+			if(radio.receiveDone()){
+				
+				//temporarily save packet
+				Packet recPacket((byte)radio.DATA[0], (byte*)radio.DATA+1, (byte)radio.DATALEN);
+				
+				//if the packet is valid, send ACK with accept byte positive
+				if(recPacket.getMeta() == packNum){
+					byte ackData[1] = {1};
+					radio.sendACK(ackData, sizeof(ackData));
+					inq.queue(recPacket);
+					packNum++;
+				}
+				//else the packet is not valid and the requested packetnumber is sent
+				else{
+					byte ackData[2] = {0, packNum};
+					radio.sendACK(ackData, sizeof(ackData));
+				}
+				
+			}
+		}
+		tries++;
+	}
 	
 }
 
