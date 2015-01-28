@@ -23,14 +23,15 @@
 
 //metas
 //request packet
-#define HSREQ 0
-#define REQREQ 1
-#define TXREQ 2
-#define NOREQ 3
+#define HSREQ 0	//handshake request
+#define REQREQ 1 //request-request
+#define TXREQ 2	//transmission request
+#define NOREQ 3	//no request
 #define DREQ 4	//data request
+#define RECREQ 5	//reception request
 
 //data packet
-#define DCNTMAX 15 //data counter max value
+#define DCNTMAX 15 //data counter max value		//not needed anymore as the packets keep track of their own packet number and which ones are the last
 
 
 

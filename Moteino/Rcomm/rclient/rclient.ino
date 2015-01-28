@@ -2,7 +2,7 @@
 #include <SPI.h>
 #include <SPIFlash.h>
 #include "rutil.h"
-#include <cstdlib.h>
+#include <cstdlib.h>	//for random functions
 
 #define DEFAULTSERVERID 1
 #define PUBLICID 0
@@ -178,13 +178,13 @@ byte query(){
 					for(int i=0; i<sent; i++)
 						outq.dequeue();		
 				}
+				//reception request packet, the server wants to transmit packets to the client
+				else if(p.getMeta() == RECREQ){	
+					Serial.println("Here");
+					//if the packet is a reception request, send it to the reception function
+					reception(p);
+				}
 			
-			}
-			//reception request packet, the server wants to transmit packets to the client
-			else if(p.getType() == RECREQ){	
-				//data reception:
-				//if the packet is a reception request, send it to the reception function
-				reception(p);
 			}
 			else{
 				Serial.println("UNRECOGNIZED PACKET RECEIVED IN QUERY(), overhead: "); Serial.println(radio.DATA[0]);//TODEL
@@ -265,10 +265,10 @@ byte transmission(Packet req){
 }
 
 void reception(Packet req){
-	Packet req;		//DELETE
-	PacketQueue outq;
-	PacketQueue inq;
-	RFM69 radio;
+//	Packet req;		//DELETE
+//	PacketQueue outq;	//DELETE
+//	PacketQueue inq;	//DELETE
+//	RFM69 radio;	//DELETE
 	
 	byte packNum = 0;
 	byte tries = 0;
@@ -278,12 +278,13 @@ void reception(Packet req){
 	if(req.getData()[1] > inq.length())
 		req.getData()[1] = (inq.maxLength() - inq.length());
 	
-	while(packNum < req.getData()[1] && packNum < (req.getData()[1] + RECEPRETRY)){
+	while(packNum < req.getData()[1] && tries < (req.getData()[1] + RECEPRETRY)){
 		//if its the first packet, send the ACK for the request. This allows the client to send back the request
 		//if the server missed the first ACK
 		if(packNum == 0){
 			//send back the request in an Ack
 			radio.sendACK(req.getPacket(), req.plength());
+			Serial.println("sending request Ack");
 		}
 		
 		time.start();
@@ -291,12 +292,13 @@ void reception(Packet req){
 		//wait to receive the data packets
 		while(time.getTime() < RECEPTIMEOUT){
 			if(radio.receiveDone()){
-				
+				Serial.println("Received packet");
 				//temporarily save packet
 				Packet recPacket((byte)radio.DATA[0], (byte*)radio.DATA+1, (byte)radio.DATALEN);
 				
 				//if the packet is valid, send ACK with accept byte positive
 				if(recPacket.getMeta() == packNum){
+					Serial.println("Correct packet, sending ACK");
 					byte ackData[1] = {1};
 					radio.sendACK(ackData, sizeof(ackData));
 					inq.queue(recPacket);
@@ -304,6 +306,7 @@ void reception(Packet req){
 				}
 				//else the packet is not valid and the requested packetnumber is sent
 				else{
+					Serial.println("incorrect PAcket");
 					byte ackData[2] = {0, packNum};
 					radio.sendACK(ackData, sizeof(ackData));
 				}

@@ -2,6 +2,7 @@
 #include <SPI.h>
 #include <SPIFlash.h>
 #include "rutil.h"
+#include <cstdlib.h>	//for random functions
 
 #define DEFAULTSERVERID 1
 #define PUBLICID 0
@@ -63,7 +64,7 @@ void loop(){
 	query();
 	reception();
 	processing();
-//	transmission();
+	transmission();
 }
 
 //handles handshaking phase
@@ -249,29 +250,47 @@ void reception(){
 void processing(){
 	//currently the processing function just dequeues the packets and prints them
 	while(inq.length() > 0){
-		printPacket(inq.dequeue());
-		//inq.dequeue();
+		//printPacket(inq.dequeue());
+		inq.dequeue();
 	}
 	
 	//TODO check outq for any remaining requests. There might still be some as the inq might be full
-	while(outq.length() > 0)
-		printPacket(outq.dequeue());
+	//while(outq.length() > 0)
+		//printPacket(outq.dequeue());
+		//outq.dequeue();
 		
 	//create packets to send to clients in the outq
+	//getting data from host is currently not implemented
+		//currently a stub function that rolls dice to see if the fake host has data to send to server
+	if(!outq.full()){
+		//roll to see if the host has data
+		byte chance = 2;
+		byte roll = rand() % chance;
+		//if success, roll for type and data
+		if(roll == 1){
+			//then add to the outq
+			Packet* p = outq.queueDummy();
+			p->setType(DPACKET);
+			p->setMeta(0);
+			for(int i=0; i<30; i++)
+				p->getData()[i] = i;
+			p->setLength(30);
+		}
+	}
 }
 
 //handles data transmission phase
 void transmission(){
-	PacketQueue outq;	//DETLETE
-	RFM69 radio;	//DELETE
-	
+//	PacketQueue outq;	//DELETE
+//	RFM69 radio;	//DELETE
+	Serial.println(outq.length());
 	//loop though output queue until there are no more packets in the queue
 	while(outq.length() > 0){
 		byte currentClient = (*outq.peek()).getData()[0];	//current client id
 		byte consec = 0;	//number of consecutive packets to the same client
 		
 		Packet req(REQPACKET, RECREQ, 0, 0, 0);	//create reception request for specific client
-		
+		Serial.println("Here");
 		byte packNum = 0;	//used to check packet number
 		byte tries = 0;		//number of transmision tries
 		Timer ackTimer;
@@ -280,7 +299,7 @@ void transmission(){
 		
 		//loop though output queue and check how much consecutive packets can be sent to the same client
 		for(int i=0; (i<outq.length() && consec <= TRANSMAX); i++){	//limit the number to the max transmission number
-			if(outq.peek()[0] != currentClient)
+			if(outq.peek()->getData()[0] != currentClient)
 				consec++;
 		}
 		
@@ -290,12 +309,12 @@ void transmission(){
 		}
 		
 		//Main transmission loop
-		while(packNum < req.getData()[1]  && packNum < (req.getData()[1] + TRANSRETRY)){
+		while(packNum < req.getData()[1]  && tries < (req.getData()[1] + TRANSRETRY)){
 			//before the first packet is sent the request must be sent
 			//send request and wait for ACK
 			if(!responded){
 				radio.send(currentClient, req.getPacket(), req.plength());
-				
+				Serial.println("sending request");
 				ackTimer.start();	//start timer
 				
 				//wait for ACK
@@ -308,20 +327,22 @@ void transmission(){
 			}
 			//if the client has already responded to the request, received data packets
 			//send the specific amount of packets the request states (could be zero)
-			else{
+			if(responded){	//not an else statement so we can continue from the request ACK
 				Packet* p = outq.peek(packNum);	//get packet to send
-				p.setMeta(packNum);		//set packetNumber
-				
+				p->setMeta(packNum);		//set packetNumber
+				Serial.print("sending packet");Serial.println(packNum);
 				radio.send(currentClient, p->getPacket(), p->plength());	//send packet
 				ackTimer.start();	//start timer
 				
 				while(ackTimer.getTime() < TRANSTIMEOUT){
 					if(radio.ACKReceived(currentClient)){
 						if(radio.DATA[0] == 1){	//the packet was received and the packet number was valid
+							Serial.println("Sending next packet");
 							packNum++;
 							delay(10);	//delay as the server must save the packet
 						}
 						else if(radio.DATA[0] == 0){ //failure, sent wrong packet. Most likely missed an Ack, change Packet Number
+							Serial.println("fixing packet");
 							packNum = radio.DATA[1];	//set packet number
 						}
 						
