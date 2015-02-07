@@ -29,7 +29,7 @@
 //Transmission
 #define	TRANSMAX 5
 #define TRANSRETRY 2
-#define TRANSTIMEOUT 80
+#define TRANSTIMEOUT 200
 
 #define DEFAULTCLIENT 2
 
@@ -208,10 +208,9 @@ void reception(){
 		
 		while(packNum <= req->getData()[1] && tries <= (req->getData()[1] + RECEPRETRY)){
 			//send tx request
-			if(packNum == 0){	//only send request first time, in case its missed, will resend
+			if(packNum == 0)	//only send request first time, in case its missed, will resend
 				radio.send(req->getData()[0], req->getPacket(), req->plength());
-				//Serial.println("request sent");	//TODEL
-			}//TODEL
+			
 				
 			time.start();
 			
@@ -219,13 +218,11 @@ void reception(){
 			//wait x amount of time for reply or failure
 			while(time.getTime() < RECEPTIMEOUT){
 				if(radio.receiveDone()){
-					//Serial.println("received packet"); //TODEL
 					//temporarily save packet and check its validity
 					Packet recPacket((byte)radio.DATA[0], (byte*)radio.DATA+1, (byte)radio.DATALEN-1);
 					
 					//if the packet is valid, send ack with acceptance byte
 					if(recPacket.getMeta() == packNum){
-						//Serial.println("packnumber matches, saving");	//TODEL
 						byte ackData[1] = {1};
 						radio.sendACK(ackData, sizeof(ackData));
 						inq.queue(recPacket);
@@ -233,10 +230,10 @@ void reception(){
 					}
 					//else, send ACK with denial byte and the packet number needed
 					else{
-						//Serial.println("packnumber does not matche, not saving");	//TODEL
 						byte ackData[2] = {0, packNum};
 						radio.sendACK(ackData, sizeof(ackData));
 					}
+					break;	//leave waiting loop as reponse was received
 				}
 			}
 			tries++;
@@ -250,31 +247,35 @@ void reception(){
 void processing(){
 	//currently the processing function just dequeues the packets and prints them
 	while(inq.length() > 0){
-		//printPacket(inq.dequeue());
-		inq.dequeue();
+		printPacket(inq.dequeue());
+//		inq.dequeue();
 	}
 	
 	//TODO check outq for any remaining requests. There might still be some as the inq might be full
-	//while(outq.length() > 0)
-		//printPacket(outq.dequeue());
-		//outq.dequeue();
+	//currently just empties out any unprocessed requests (client did not respond, probably)
+	while(outq.length() > 0)
+		outq.dequeue();
 		
 	//create packets to send to clients in the outq
 	//getting data from host is currently not implemented
-		//currently a stub function that rolls dice to see if the fake host has data to send to server
+	//currently a stub function that rolls dice to see if the fake host has data to send to server
 	if(!outq.full()){
 		//roll to see if the host has data
-		byte chance = 2;
-		byte roll = rand() % chance;
-		//if success, roll for type and data
-		if(roll == 1){
-			//then add to the outq
-			Packet* p = outq.queueDummy();
-			p->setType(DPACKET);
-			p->setMeta(0);
-			for(int i=0; i<30; i++)
-				p->getData()[i] = i;
-			p->setLength(30);
+		byte tries = 5;
+		for(int i=0; i<tries; i++){
+			byte chance = 2;
+			byte roll = rand() % chance;
+			//if success, roll for type and data
+			if(roll == 1){
+				//then add to the outq
+				Packet* p = outq.queueDummy();
+				p->setType(DPACKET);
+				p->setMeta(0);
+				p->getData()[0] = clist.getClient(0);	//set client id
+				for(int i=1; i<30; i++)
+					p->getData()[i] = rand() % 250;
+				p->setLength(30);
+			}
 		}
 	}
 }
@@ -283,14 +284,14 @@ void processing(){
 void transmission(){
 //	PacketQueue outq;	//DELETE
 //	RFM69 radio;	//DELETE
-	Serial.println(outq.length());
+	
 	//loop though output queue until there are no more packets in the queue
 	while(outq.length() > 0){
 		byte currentClient = (*outq.peek()).getData()[0];	//current client id
 		byte consec = 0;	//number of consecutive packets to the same client
 		
 		Packet req(REQPACKET, RECREQ, 0, 0, 0);	//create reception request for specific client
-		Serial.println("Here");
+		
 		byte packNum = 0;	//used to check packet number
 		byte tries = 0;		//number of transmision tries
 		Timer ackTimer;
@@ -299,59 +300,67 @@ void transmission(){
 		
 		//loop though output queue and check how much consecutive packets can be sent to the same client
 		for(int i=0; (i<outq.length() && consec <= TRANSMAX); i++){	//limit the number to the max transmission number
-			if(outq.peek()->getData()[0] != currentClient)
+			if(outq.peek()->getData()[0] == currentClient)
 				consec++;
+			else
+				break;
 		}
 		
 		{	//set the requested packet number and node id
-			byte data[2] = {NODEID, consec};
-			req.setData(data, 2);
+			byte data[2] = {NODEID, consec};	//reception request packet: [overhead][destination id][requested packet number]
+			req.setData(data, sizeof(data));
 		}
 		
 		//Main transmission loop
 		while(packNum < req.getData()[1]  && tries < (req.getData()[1] + TRANSRETRY)){
 			//before the first packet is sent the request must be sent
 			//send request and wait for ACK
-			if(!responded){
+			if(responded == false){
+//				Serial.println("SR");	//TODEL
 				radio.send(currentClient, req.getPacket(), req.plength());
-				Serial.println("sending request");
 				ackTimer.start();	//start timer
 				
 				//wait for ACK
 				while(ackTimer.getTime() < TRANSTIMEOUT){
 					if(radio.ACKReceived(currentClient)){
-						req.getData()[1] = radio.DATA[1];	//get new allowed number of packets from ACK packet
+//						Serial.println("AR ");	//TODEL
+//						Serial.print(tries);Serial.print(" ");Serial.println(req.getData()[1]);//TODEL
+						req.getData()[1] = radio.DATA[2];	//get new allowed number of packets from ACK packet, remember that radio data includes overhead byte in array math
 						responded = true;
+						tries = 0;
+						break;	//leave waiting loop as reponse was received
 					}
 				}
 			}
 			//if the client has already responded to the request, received data packets
 			//send the specific amount of packets the request states (could be zero)
-			if(responded){	//not an else statement so we can continue from the request ACK
+			if(responded == true){	//not an else statement so we can continue from the request ACK
 				Packet* p = outq.peek(packNum);	//get packet to send
 				p->setMeta(packNum);		//set packetNumber
-				Serial.print("sending packet");Serial.println(packNum);
+//				Serial.print("	SP: ");Serial.println(packNum);	//TODEL
 				radio.send(currentClient, p->getPacket(), p->plength());	//send packet
 				ackTimer.start();	//start timer
 				
 				while(ackTimer.getTime() < TRANSTIMEOUT){
 					if(radio.ACKReceived(currentClient)){
 						if(radio.DATA[0] == 1){	//the packet was received and the packet number was valid
-							Serial.println("Sending next packet");
+//							Serial.println("		SNR");	//TODEL
 							packNum++;
-							delay(10);	//delay as the server must save the packet
+							delay(10);	//delay as the client must save the packet
 						}
 						else if(radio.DATA[0] == 0){ //failure, sent wrong packet. Most likely missed an Ack, change Packet Number
-							Serial.println("fixing packet");
+//							Serial.println("		FP");	//TODEL
 							packNum = radio.DATA[1];	//set packet number
 						}
-						
+						break;	//leave waiting loop as reponse was received
 					}
 				}
 			}
 			tries++;
+//			Serial.print("NUMS ");Serial.print(req.getData()[1]);Serial.print(" ");Serial.println(tries);	//TODEL
 		}
 		
+//		Serial.println("DQQ");	//TODEL
 		//dequeue all sent packets
 		for(int i=0; i<packNum; i++)
 			outq.dequeue();

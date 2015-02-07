@@ -25,7 +25,7 @@
 #define ACKTIMEOUT 80
 #define TRANSRETRY 2
 //Reception
-#define RECEPTIMEOUT 80
+#define RECEPTIMEOUT 200
 #define RECEPRETRY 2
 
 //byte handshake();
@@ -63,6 +63,7 @@ void setup(){
 
 void loop(){
 	processing();
+//	Serial.println("QUERY"); //TODEL
 	query();
 }
 
@@ -180,7 +181,6 @@ byte query(){
 				}
 				//reception request packet, the server wants to transmit packets to the client
 				else if(p.getMeta() == RECREQ){	
-					Serial.println("Here");
 					//if the packet is a reception request, send it to the reception function
 					reception(p);
 				}
@@ -233,9 +233,9 @@ byte transmission(Packet req){
 	
 	//use peek(with int) function to get packet as we will make sure to save packets if there are retries
 	Packet* p = outq.peek(packNum);
-	
+
 	//check how much packets is allowed to be sent
-	while(packNum <= req.getData()[1] && tries <= (req.getData()[0]+TRANSRETRY)){	//limits the loop to the number of packets allowed (or the number + retries if some are failures)
+	while(packNum < req.getData()[1] && tries < (req.getData()[1]+TRANSRETRY)){	//limits the loop to the number of packets allowed (or the number + retries if some are failures)
 		p->setMeta(packNum);	//set packet number
 		
 		radio.send(SERVERID, p->getPacket(), p->plength());
@@ -255,7 +255,7 @@ byte transmission(Packet req){
 					packNum = radio.DATA[1];	//set packet number
 					p = outq.peek(packNum);
 				}
-				
+				break;	//leave waiting loop as reponse was received
 			}
 		}
 		tries++;	//keeping track of transmission tries
@@ -275,16 +275,17 @@ void reception(Packet req){
 	Timer time;
 	
 	//check the request and trim the packet number of there is no space in the input queue
-	if(req.getData()[1] > inq.length())
+	if(req.getData()[1] > (inq.maxLength() - inq.length()))
 		req.getData()[1] = (inq.maxLength() - inq.length());
+		
 	
 	while(packNum < req.getData()[1] && tries < (req.getData()[1] + RECEPRETRY)){
 		//if its the first packet, send the ACK for the request. This allows the client to send back the request
 		//if the server missed the first ACK
 		if(packNum == 0){
 			//send back the request in an Ack
+//			Serial.println("Ack");	//TODEL
 			radio.sendACK(req.getPacket(), req.plength());
-			Serial.println("sending request Ack");
 		}
 		
 		time.start();
@@ -292,30 +293,33 @@ void reception(Packet req){
 		//wait to receive the data packets
 		while(time.getTime() < RECEPTIMEOUT){
 			if(radio.receiveDone()){
-				Serial.println("Received packet");
-				//temporarily save packet
-				Packet recPacket((byte)radio.DATA[0], (byte*)radio.DATA+1, (byte)radio.DATALEN);
-				
-				//if the packet is valid, send ACK with accept byte positive
-				if(recPacket.getMeta() == packNum){
-					Serial.println("Correct packet, sending ACK");
-					byte ackData[1] = {1};
-					radio.sendACK(ackData, sizeof(ackData));
-					inq.queue(recPacket);
-					packNum++;
+//				Serial.println("Received packet");	//TODEL
+				if(Packet::getPacketType((byte)radio.DATA[0]) == DPACKET){
+					//temporarily save received packet
+					Packet recPacket((byte)radio.DATA[0], (byte*)radio.DATA+1, (byte)radio.DATALEN);
+					
+					//if the packet is valid, send ACK with accept byte positive
+					if(recPacket.getMeta() == packNum){
+//						Serial.println("CP");	//TODEL
+						byte ackData[1] = {1};
+						radio.sendACK(ackData, sizeof(ackData));
+						inq.queue(recPacket);
+						packNum++;
+						delay(10);	//wait for next packet to be built
+					}
+					else{//else the packet is not valid and the requested packetnumber is sent
+//						Serial.println("IC Packet");
+						byte ackData[2] = {0, packNum};
+						radio.sendACK(ackData, sizeof(ackData));
+					}
+					break;	//leave waiting loop as reponse was received
 				}
-				//else the packet is not valid and the requested packetnumber is sent
-				else{
-					Serial.println("incorrect PAcket");
-					byte ackData[2] = {0, packNum};
-					radio.sendACK(ackData, sizeof(ackData));
-				}
-				
 			}
 		}
 		tries++;
 	}
-	
+	delay(20);
+//	Serial.println("DN");	//TODEL
 }
 
 //not tested
