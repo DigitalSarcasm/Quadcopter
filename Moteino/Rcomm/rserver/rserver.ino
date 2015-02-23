@@ -316,15 +316,12 @@ void transmission(){
 			//before the first packet is sent the request must be sent
 			//send request and wait for ACK
 			if(responded == false){
-//				Serial.println("SR");	//TODEL
 				radio.send(currentClient, req.getPacket(), req.plength());
 				ackTimer.start();	//start timer
 				
 				//wait for ACK
 				while(ackTimer.getTime() < TRANSTIMEOUT){
 					if(radio.ACKReceived(currentClient)){
-//						Serial.println("AR ");	//TODEL
-//						Serial.print(tries);Serial.print(" ");Serial.println(req.getData()[1]);//TODEL
 						req.getData()[1] = radio.DATA[2];	//get new allowed number of packets from ACK packet, remember that radio data includes overhead byte in array math
 						responded = true;
 						tries = 0;
@@ -337,19 +334,16 @@ void transmission(){
 			if(responded == true){	//not an else statement so we can continue from the request ACK
 				Packet* p = outq.peek(packNum);	//get packet to send
 				p->setMeta(packNum);		//set packetNumber
-//				Serial.print("	SP: ");Serial.println(packNum);	//TODEL
 				radio.send(currentClient, p->getPacket(), p->plength());	//send packet
 				ackTimer.start();	//start timer
 				
 				while(ackTimer.getTime() < TRANSTIMEOUT){
 					if(radio.ACKReceived(currentClient)){
 						if(radio.DATA[0] == 1){	//the packet was received and the packet number was valid
-//							Serial.println("		SNR");	//TODEL
 							packNum++;
 							delay(10);	//delay as the client must save the packet
 						}
 						else if(radio.DATA[0] == 0){ //failure, sent wrong packet. Most likely missed an Ack, change Packet Number
-//							Serial.println("		FP");	//TODEL
 							packNum = radio.DATA[1];	//set packet number
 						}
 						break;	//leave waiting loop as reponse was received
@@ -357,14 +351,11 @@ void transmission(){
 				}
 			}
 			tries++;
-//			Serial.print("NUMS ");Serial.print(req.getData()[1]);Serial.print(" ");Serial.println(tries);	//TODEL
 		}
 		
-//		Serial.println("DQQ");	//TODEL
 		//dequeue all sent packets
 		for(int i=0; i<packNum; i++)
 			outq.dequeue();
-		
 	}
 	
 }

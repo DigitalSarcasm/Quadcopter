@@ -63,7 +63,6 @@ void setup(){
 
 void loop(){
 	processing();
-//	Serial.println("QUERY"); //TODEL
 	query();
 }
 
@@ -224,9 +223,6 @@ byte transmission(Packet req){
  * Returns: number of packets sent
  */
 byte transmission(Packet req){
-	//PacketQueue outq;	//TODEL
-	//RFM69 radio;		//TODEL
-	//Packet req;		//TODEL
 	Timer ackTimer;
 	byte packNum = 0;	//packet number generator
 	byte tries = 0;		//number of tries
@@ -265,11 +261,6 @@ byte transmission(Packet req){
 }
 
 void reception(Packet req){
-//	Packet req;		//DELETE
-//	PacketQueue outq;	//DELETE
-//	PacketQueue inq;	//DELETE
-//	RFM69 radio;	//DELETE
-	
 	byte packNum = 0;
 	byte tries = 0;
 	Timer time;
@@ -284,7 +275,6 @@ void reception(Packet req){
 		//if the server missed the first ACK
 		if(packNum == 0){
 			//send back the request in an Ack
-//			Serial.println("Ack");	//TODEL
 			radio.sendACK(req.getPacket(), req.plength());
 		}
 		
@@ -293,14 +283,12 @@ void reception(Packet req){
 		//wait to receive the data packets
 		while(time.getTime() < RECEPTIMEOUT){
 			if(radio.receiveDone()){
-//				Serial.println("Received packet");	//TODEL
 				if(Packet::getPacketType((byte)radio.DATA[0]) == DPACKET){
 					//temporarily save received packet
 					Packet recPacket((byte)radio.DATA[0], (byte*)radio.DATA+1, (byte)radio.DATALEN);
 					
 					//if the packet is valid, send ACK with accept byte positive
 					if(recPacket.getMeta() == packNum){
-//						Serial.println("CP");	//TODEL
 						byte ackData[1] = {1};
 						radio.sendACK(ackData, sizeof(ackData));
 						inq.queue(recPacket);
@@ -308,7 +296,6 @@ void reception(Packet req){
 						delay(10);	//wait for next packet to be built
 					}
 					else{//else the packet is not valid and the requested packetnumber is sent
-//						Serial.println("IC Packet");
 						byte ackData[2] = {0, packNum};
 						radio.sendACK(ackData, sizeof(ackData));
 					}
@@ -318,8 +305,7 @@ void reception(Packet req){
 		}
 		tries++;
 	}
-	delay(20);
-//	Serial.println("DN");	//TODEL
+//	delay(20);		//TODEL
 }
 
 //not tested
