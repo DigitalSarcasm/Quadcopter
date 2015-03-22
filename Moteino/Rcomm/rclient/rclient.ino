@@ -100,22 +100,6 @@ void processing(){
 			printPacket(inq.dequeue());
 		}
 		
-		//queue up packets from host to send (if the queue is not full)
-/*		if(!outq.full() && Serial.available() > 0){
-//			//currently the packets are made in this function. They should be made by the host
-//			char c [] = {Serial.read(), '\0'};
-//			int psize = atoi(c);	//the first byte is the size of the incoming packet
-//			Serial.println(psize);
-//			while(Serial.available() < psize)Serial.println(Serial.available());
-//			Packet* p;
-//			outq.queueDummy();	//create dummy packet and make real packet
-//			p->setOverhead(Serial.read());	//set overhead for packet
-//			psize--;//overhead was read
-//			Serial.println(Serial.readBytes((char*)(p->getData()), psize));	//get data for packet
-//			p->setLength(psize);
-//			Serial.println("read");
-		}*/
-		
 		//getting data from host is currently not implemented
 		//currently a stub function that rolls dice to see if the fake host has data to send to server
 		if(!outq.full()){
