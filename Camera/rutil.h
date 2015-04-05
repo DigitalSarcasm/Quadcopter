@@ -6,6 +6,7 @@
 //#include <StandardCplusplus.h>
 //#include <vector>
 #include <stdint.h>
+#include <sys/time.h>
 
 #define PACKETSIZE 61
 
@@ -39,18 +40,30 @@ typedef uint8_t byte;	//REPLACES the arduino include
 
 
 ////////////Timer object declaration
-//timer object, keeps time in MS
-class Timer{
-protected:
-	unsigned long startTime;
-	unsigned long stopTime;
-public:
-	Timer();	
-	void start();
-	unsigned long stop();
-	unsigned long getTime();
-};
 
+class Timer{
+public:
+    Timer();                                    // default constructor
+
+    void   start();                             // start timer
+    void   stop();                              // stop the timer
+    double getElapsedTime();                    // get elapsed time in second
+    double getElapsedTimeInSec();               // get elapsed time in second (same as getElapsedTime)
+    double getElapsedTimeInMilliSec();          // get elapsed time in milli-second
+    double getElapsedTimeInMicroSec();          // get elapsed time in micro-second
+
+
+protected:
+
+
+private:
+    double startTimeInMicroSec;                 // starting time in micro-second
+    double endTimeInMicroSec;                   // ending time in micro-second
+    int    stopped;                             // stop flag 
+
+    timeval startCount;                         
+    timeval endCount;                           
+};
 
 //Packet object declaration
 
@@ -92,6 +105,8 @@ public:
 	
 	byte getPriority();
 	void setPriority(const byte& Priority);
+	
+	void pad();
 	
 	static byte makeOverhead(const byte& ptype, byte meta); //make overhead byte using type and meta
 	static byte getPacketType(const byte& overhead); //get packet type of a overhead byte
