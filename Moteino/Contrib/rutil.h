@@ -28,7 +28,7 @@
 #define TXREQ 2	//transmission request
 #define NOREQ 3	//no request
 #define DREQ 4	//data request
-#define RECREQ 5	//reception request
+#define RECREQ 5 //reception request
 
 //data packet
 #define DCNTMAX 15 //data counter max value		//not needed anymore as the packets keep track of their own packet number and which ones are the last
@@ -41,11 +41,13 @@ class Timer{
 protected:
 	unsigned long startTime;
 	unsigned long stopTime;
+	boolean run;
 public:
 	Timer();	
 	void start();
 	unsigned long stop();
 	unsigned long getTime();
+	boolean running();
 };
 
 
@@ -73,6 +75,7 @@ public:
 	byte* getPacket();	//returns databuffer with overhead
 	byte getData(byte* buffer, const byte& size);	//not tested //copy data buffer to another buffer
 	byte setData(byte* data, const byte& size);	//set data buffer
+	byte setPacket(byte* cdata, const byte& size);
 	
 	byte length(){return dataLength;}	//return length of data buffer
 	byte plength(){return dataLength+1;}	//returns length of data buffer + overhead
@@ -89,6 +92,8 @@ public:
 	
 	byte getPriority();
 	void setPriority(const byte& Priority);
+	
+	void pad();
 	
 	static byte makeOverhead(const byte& ptype, byte meta); //make overhead byte using type and meta
 	static byte getPacketType(const byte& overhead); //get packet type of a overhead byte

@@ -199,6 +199,9 @@
     </VirtualDirectory>
     <File Name="Tests/makefile"/>
     <File Name="Tests/testtester.cpp"/>
+    <VirtualDirectory Name="synct">
+      <File Name="Tests/synct/synct.ino"/>
+    </VirtualDirectory>
   </VirtualDirectory>
   <VirtualDirectory Name="Contrib">
     <File Name="Contrib/rutil.h"/>

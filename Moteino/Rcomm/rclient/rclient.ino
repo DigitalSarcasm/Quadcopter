@@ -2,13 +2,13 @@
 #include <SPI.h>
 #include <SPIFlash.h>
 #include "rutil.h"
-#include <cstdlib.h>	//for random functions
+//#include <cstdlib>	//for random functions
 
 #define DEFAULTSERVERID 1
 #define PUBLICID 0
 #define NETID 100
 #define FREQ RF69_915MHZ
-#define SERIALBAUD 115200
+#define SERIALBAUD 9600
 
 #define ANT_LED 9
 #define FLASH_LED 8
@@ -18,6 +18,10 @@
 
 //Processing
 #define PROCTIME 500
+#define SERIALWAIT 100
+#define SERIALQ 20
+#define OKTOSEND 1
+#define RESENDMAX 400
 //Query
 #define QUERYTIME 500
 //Transmission
@@ -27,6 +31,7 @@
 //Reception
 #define RECEPTIMEOUT 200
 #define RECEPRETRY 2
+
 
 //byte handshake();
 //void processing();
@@ -48,6 +53,9 @@ PacketQueue<INQUEUE> inq;
 
 Timer phaset;
 
+boolean serialSent = false;	//has the client informed the host that the serial buffer is empty
+Timer resend;
+
 void setup(){
 	Serial.begin(SERIALBAUD);	//Initialize serial
 	
@@ -58,7 +66,7 @@ void setup(){
 	flash.initialize();		//TODO check that this function passes
 	
 	while(!handshake());
-	Serial.println("handshake complete");	//TODEL
+//	Serial.println("handshake complete");	//TODEL
 }
 
 void loop(){
@@ -86,23 +94,33 @@ byte handshake(){
 	return false;
 }
 
+//Sends data to the client as batches of packets. Receives one packet at a time.
+//For receiving, checks if buffer is empty, if not, than a packet must be incoming.
+//if so, wait till the packet is completely sent (With timeout)
+//when packet is completely received, make packet object and add to queue. 
 void processing(){
 	//process any saved data from received packets and incoming data from host
 	
 	phaset.start();	//start phase timer
 	
 	//TODO: FIND WAY OF INTERRUPTING HOST TO HAVE SYNCED UP PROCESSING
-	//should find way of makign sure that the serial buffer on the other side is not full
+	//should find way of making sure that the serial buffer on the other side is not full
 	while(phaset.getTime() < PROCTIME){
 		//send any data received from the server
-		if(inq.length()>0){
-			//currently prints the received packets
-			printPacket(inq.dequeue());
+//		if(inq.length()>0){
+//			Packet outputPacket = inq.dequeue();
+//
+//			for(int i=0; i<outputPacket.plength(); i++)
+//				Serial.write(outputPacket.getPacket()[i]);
+//		}
+		//simply remove the data from the queue
+		if(inq.length() > 0){
+			inq.dequeue();
 		}
-		
+
 		//getting data from host is currently not implemented
 		//currently a stub function that rolls dice to see if the fake host has data to send to server
-		if(!outq.full()){
+	/*	if(!outq.full()){
 			//roll to see if the host has data
 			byte chance = 2000;
 			byte roll = rand() % chance;
@@ -116,13 +134,69 @@ void processing(){
 					p->getData()[i] = i;
 				p->setLength(30);
 			}
+		} */
+		
+		bool packetQueuing = true;	//always assume there is a packet queueing and check the serial buffer
+		//ugly way of doing this, but i'm tired
+		while(!outq.full() && packetQueuing){
+			Timer serialWait;
+			
+			if(!serialSent){
+				Serial.write(OKTOSEND);
+				serialSent = true;
+			}
+			
+			//check serial for any buffered data
+			if(Serial.available() > 0){
+				//if data is >0, then a packet is currently being written 
+				serialWait.start();
+				while(serialWait.getTime() < SERIALWAIT){	//wait for data to be written With timeout
+					if(Serial.available() >= PACKETSIZE){
+						byte buffer[PACKETSIZE];
+						Serial.readBytes((char*)buffer, PACKETSIZE);	//get data from serial buffer
+						Packet* p = outq.queueDummy();	//make packet
+						p->setPacket(buffer, PACKETSIZE); //fill packet
+						serialSent = false;
+					}
+				}
+				
+				if(!serialSent){	//the data has been read and buffer space is available
+					delay(100);
+					Serial.write(OKTOSEND);
+					Serial.flush();
+					serialSent = true;
+					
+					packetQueuing = false;	//assume the packet does not queue in time limit
+					serialWait.start();	//start timer and check if a packet starts being sent (buffer != 0)
+					
+					while(serialWait.getTime() < SERIALQ){
+						if(Serial.available() > 0){
+							packetQueuing = true;	//if packet queues up
+							break;
+						}
+					}
+					
+				}
+			}
+			else{
+				packetQueuing = false;	//no packet queuing, so exit loop
+				
+//				if(!resend.running())
+//					resend.start();
+//				else if(resend.getTime() > RESENDMAX){	//in case the host misses the OK bit
+//					serialSent = false;
+//					resend.stop();
+//				}
+			}
+			
 		}
+		
 	}
 }
 
 //handles queries from the server. The server may query for requests from the client,
 	//may request data from the host or start transmitting data to client.
-byte query(){
+void query(){
 	//make sure that the client is always on rx mode unless it is transmitting
 	phaset.start();
 	while(phaset.getTime() < QUERYTIME){
@@ -151,7 +225,7 @@ byte query(){
 				//TODO data request packet, this will be sent to the host
 				else if(p.getMeta() == DREQ){
 					//if the packet type is a data-request, create packet in inqueue
-					Serial.println("wrong meta in query");	//TODEL
+					//Serial.println("wrong meta in query");	//TODEL
 				}
 				//data transmission packet, the server is allowing transmissions to it 
 				else if(p.getMeta() == TXREQ){
@@ -170,32 +244,11 @@ byte query(){
 			
 			}
 			else{
-				Serial.println("UNRECOGNIZED PACKET RECEIVED IN QUERY(), overhead: "); Serial.println(radio.DATA[0]);//TODEL
+				//Serial.println("UNRECOGNIZED PACKET RECEIVED IN QUERY(), overhead: "); Serial.println(radio.DATA[0]);//TODEL
 			}
 		}
 	}
 }
-
-/*
-byte transmission(Packet req){
-	RFM69 radio; //DELETE
-	Packet req;	//DELETE
-	PacketQueue outq;//DELETE
-	byte counter = 0;
-	
-	//construct packet to be transmitted using the request
-	for(int i=0; i<req.getData()[1]; i++){	//get number of packets to send from the request packet
-		//send the allowed amount of packets
-		if(radio.sendWithRetry(SERVERID, outq.peek()->getPacket(),outq.peek()->plength(), TRANSRETRY,TRANSTIMEOUT)){
-			outq.dequeue();
-			counter++;
-		}
-		delay(10);	//allow some delay for the server to prepare to receive next packet
-	}
-	
-	//return the number of packets sent
-	return counter;
-}*/
 
 /*
  * The transmission functions handles the transmission of X amount of packets from the Output queue
