@@ -7,27 +7,51 @@
 //////////////////////////Timer object 
 
 Timer::Timer(){
-	startTime = 0;
-	stopTime = 0;
+
+    startCount.tv_sec = startCount.tv_usec = 0;
+    endCount.tv_sec = endCount.tv_usec = 0;
+
+    stopped = 0;
+    startTimeInMicroSec = 0;
+    endTimeInMicroSec = 0;
 }
 
-void Timer::start(){
-	startTime = millis();
-	stopTime = 0;
+void Timer::start()
+{
+    stopped = 0; // reset stop flag
+    gettimeofday(&startCount, 0);
 }
 
-unsigned long Timer::stop(){
-	stopTime = millis();
-	return (stopTime - startTime);
+void Timer::stop()
+{
+    stopped = 1; // set timer stopped flag
+    gettimeofday(&endCount, 0);
 }
 
-unsigned long Timer::getTime(){
-	if(stopTime != startTime)
-		return millis() - startTime;
-	else
-		return stopTime - startTime;
+double Timer::getElapsedTimeInMicroSec()
+{
+    if(!stopped)
+        gettimeofday(&endCount, 0);
+
+    startTimeInMicroSec = (startCount.tv_sec * 1000000.0) + startCount.tv_usec;
+    endTimeInMicroSec = (endCount.tv_sec * 1000000.0) + endCount.tv_usec;
+    return endTimeInMicroSec - startTimeInMicroSec;
 }
 
+double Timer::getElapsedTimeInMilliSec()
+{
+    return this->getElapsedTimeInMicroSec() * 0.001;
+}
+
+double Timer::getElapsedTimeInSec()
+{
+    return this->getElapsedTimeInMicroSec() * 0.000001;
+}
+
+double Timer::getElapsedTime()
+{
+    return this->getElapsedTimeInSec();
+}
 
 
 //////////////////////Packet Object
@@ -168,7 +192,7 @@ byte Packet::setType(byte ptype){
 	if(ptype > TYPES-1)
 		return 0;
 	ptype = ptype << 5;	//new type bits
-	data[0] = data[0] & B00011111; //mask old type bits
+	data[0] = data[0] & 31; //B00011111 //mask old type bits
 	data[0] = data[0] | ptype;	//add new type bits to ovehead
 	return 1;
 }
@@ -183,7 +207,7 @@ byte Packet::setMeta(byte meta){
 	//check if meta is only the first 5 bits set (0->31)
 	if(meta > METAS-1)
 		return 0;
-	data[0] = data[0] & B11100000; //mask last meta bits
+	data[0] = data[0] & 224; //B11100000; //mask last meta bits
 	data[0] = data[0] | meta;	//add new meta bits
 	return 1;
 }
@@ -198,17 +222,27 @@ void Packet::setPriority(const byte& priority){
 	this->priority = priority;
 }
 
+//pads the packet with 0 values up to PACKETSIZE
+void Packet::pad(){
+	if(dataLength < PACKETSIZE){
+		for(int i=dataLength+1; i<PACKETSIZE; i++){
+			data[i] = 0;
+		}
+		dataLength = PACKETSIZE - 1;
+	}
+}
+
 //Makes overhead byte from type and meta bytes. Uses bit masking and adding
 //returns EMPTYPACKET for invalid overhead
 byte Packet::makeOverhead(const byte& ptype, byte meta){
-	byte overhead = B00000000;
+	byte overhead = 0; //B00000000
 	
 	if((ptype > TYPES-1) || (meta > METAS-1) )
 		return EPACKET;
 	
 	overhead = overhead | ptype;	//get type bits
 	overhead = overhead << 5;		//shift type bits
-	meta = meta & B00011111;		//mask the first 3 bits of meta
+	meta = meta & 31; //B00011111		//mask the first 3 bits of meta
 	overhead = overhead | meta;	//get meta data bits
 
 	return overhead;
@@ -216,7 +250,7 @@ byte Packet::makeOverhead(const byte& ptype, byte meta){
 
 //Get type value from a overhead byte
 byte Packet::getPacketType(const byte& overhead){
-	byte typeMask = B11100000;
+	byte typeMask = 224; //B11100000
 	byte ptype = overhead & typeMask;
 	ptype = ptype >> 5;	//c++ does not have built in circular shift, we will use this instead
 	return ptype;
@@ -224,7 +258,7 @@ byte Packet::getPacketType(const byte& overhead){
 
 //Gets meta value from a overhead byte
 byte Packet::getPacketMeta(const byte& overhead){
-	byte typeMask = B00011111;
+	byte typeMask = 31; //B00011111
 	byte data = overhead & typeMask;
 	return data;
 }
