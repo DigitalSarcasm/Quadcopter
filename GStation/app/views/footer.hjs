@@ -1,0 +1,27 @@
+<!--footer -->	
+
+<div id="footer" style="opacity: 1;">
+    
+    <div class="methaphore" style="">
+		
+		<div class="icon">
+			<a onclick="addQuad()"> <img src="./../images/addQuad.png" width="60px" height="60px" /></a>
+		</div>
+		
+		<div class="icon">
+			<a onclick="gstation()"> <img src="./../images/gstation.png" width="60px" height="60px" /></a>
+		</div>
+		
+		
+		
+		<div class="icon" style="float:right">
+			<a onclick=""> <img alt="manual controle" src="./../images/manual.png" width="60px" height="60px" /></a>
+		</div>
+		
+	</div>
+     
+</div>
+<hr/>
+
+</body>
+</html>
