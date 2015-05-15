@@ -1,0 +1,546 @@
+<title></title>
+<!DOCTYPE html>
+
+<html>
+  <head>
+  	<meta charset="utf-8" />
+		
+		<title>{{ title }}</title>
+		<meta  name="description" content="<?= $page_description ?>" />
+		
+		<link rel="stylesheet" type="text/css"  href="stylesheets/style.css">
+  	 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+  	 
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
+    <script type="text/javascript"
+      <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&libraries=drawing"></script>
+    </script>
+    
+</head>
+<body>
+	<div id='wrapper'>
+	<header id='header' style=""> <h4 style="font-size: 0.9em;"> <!-- Placez ici le contenu du pied de page -->
+	Ground Station</h4>
+
+</header> 
+
+<!--body -->	
+
+
+
+</script>
+
+
+
+
+<!-- <div  class="overlay" id="overlay2"  style=""></div> -->
+	
+		<div id='top-nav' class="methaphore" style="height:60px;width: 100%;margin-top: 25px;margin-bottom: 5px">
+	
+		<div class="icon">
+			<a onclick=""> <img src="./../images/battery.png" width="60px" height="60px" /></a>
+		</div>
+		
+		<div class="icon">
+			<a onclick=""> <img src="./../images/config.png" width="60px" height="60px" /></a>
+		</div>
+		
+		<div id='st' style='margin-top:10px;margin-right:5px;float:right;' ></div>
+		
+	</div>
+	
+	 <div style="margin-top: 5px" id="map1"></div>
+	 <div id="map-selected"></div>
+  	 <div id="map-controls"><button>Select</button></div>
+	 <div  id="map-canvas" >
+		
+	</div>
+	<!--<button onclick="switchQuad('1')" value="1" style="visibility: visible" id="fade_map1">Map1</button>-->
+	<button onclick='location.reload()'>Clear</button>
+	
+	<div class="overlay" id="overlay1"  style="z-index: 100"></div>
+<div class="box" style="" id="box1" style="">
+<button onclick="exit()" id="exit" style="color:white;background-color: black;height:20px;width:55px;" >Exit</button>
+<div id='box-head'> <h2>Ground Station Status </h2> </div>
+<div>
+	
+	<h2>Latitude :</h2><?= $_SESSION['latitude']?>
+	<h2>Longitude :</h2><?= $_SESSION['longitude']?>
+</div>
+</div>
+
+
+
+<!--footer -->	
+
+<div id="footer" style="opacity: 1;">
+    
+    <div class="methaphore" id="methaphore" style="">
+		
+		<!-- <div id="coord" class="leftContainer ">
+	<h2> Would you like to start the mission </h2>
+	<img src="./../images/Start.png" width="20px" height="20px" />
+	</div>
+		 -->
+		 
+		<div id='info' style='margin: 0px auto; width:500px;'> info </div>
+		
+		<!--<div  class="icon">
+			<a onclick="addQuad()"> <img src="./../images/addQuad.png" width="60px" height="60px" /></a>
+		</div>-->
+		
+		<div  style="margin-right:8px;" class="icon">
+			<a onclick="gstation()"> <img src="./../images/gstation.png" width="60px" height="60px" /></a>
+		</div>
+		
+		<div class="icon">
+			<a onclick="takePicture()"> <img src="./../images/camera.png" width="60px" height="60px" /></a>
+		</div>
+		
+		<div class="icon"  style="margin-right:9px;">
+			<a onclick=""> <img src="./../images/video.png" width="70px" height="70px" /></a>
+		</div>
+		
+		<div class="icon" style="">
+			<a onclick=""> <img alt="manual controle" src="./../images/manual.png" width="60px" height="60px" /></a>
+		</div>
+	
+	</div>
+
+</div>
+<br />
+<hr />
+
+<div id='addedImg'></div>
+
+<script type=text/javascript>
+
+	var showImage = 0;
+	var distance;
+	var lastLat = 0;
+	var lastLng = 0;
+	var selectedAreaArray = [];
+	var map;
+	var start;
+	var isStarted = false;
+	var marker;
+	var dmarker;
+	var lmarker = [];
+	var flightPath
+	var flightPlanCoordinates = [];
+	var arrayOflatLng = [];
+	var pictureArr = [false];
+	var destinationLocation;
+	var loc;
+	var dlat = [];
+	var dlng = [];
+	var currentLocation;
+	var info = ""
+	var line;
+	var lineSymbol;
+	var selectedArea = null;
+    var selecting = false;
+    var drawingManager;
+    var imgArray = [];
+    var imgCount = 0;
+
+function toggleSelector () {
+    
+   var $el = $('#map-controls button');
+   if ( $el.button('option', 'label') == 'Select' ) {
+      $el.button('option', 'label', 'Interact');
+      drawingManager.setMap(map);
+   	} 
+   
+   	else {
+      $el.button('option', 'label', 'Select');
+      
+   }
+   
+   
+}
+	
+	function positionSuccess(data){
+	
+		loc = data; 
+		
+		currentLocation = new google.maps.LatLng(data.coords.latitude, data.coords.longitude);
+		
+		var mapOptions = 
+		{
+		center : currentLocation,
+		zoom : 18,
+		mapTypeId: google.maps.MapTypeId.SATELLITE
+		};
+		
+		map = new google.maps.Map(document.getElementById("map-canvas"),
+	    mapOptions);
+	    
+	    marker = new google.maps.Marker({
+	    	position: currentLocation,
+	    	map: map,
+	    	icon: './../images/ping.png'
+	    });
+	    
+	     drawingManager = new google.maps.drawing.DrawingManager({
+	     drawingMode: google.maps.drawing.OverlayType.CIRCLE,
+	     drawingControl: false,
+	     
+		     circleOptions: {
+		       fillColor: '#ffff00',
+		       fillOpacity: 0.3,
+		       strokeWeight: 1,
+		       clickable: false,
+		       editable: true,
+		       zIndex: 1
+		     }
+   		});
+	    
+	    
+google.maps.event.addListener(map, "click", function(event) {
+    
+    lastLat = event.latLng.lat();
+    lastLng = event.latLng.lng();
+    
+  	startMission();
+   	
+	});
+	
+	flightPath = new google.maps.Polyline({
+    path: flightPlanCoordinates,
+    geodesic: true,
+    strokeColor: '#FF0000',
+    strokeOpacity: 1.0,
+    strokeWeight: 2
+  });
+  
+   $('#map-canvas').on('mousedown', function() {
+      if ( !selecting ) return;
+      if ( selectedArea ) {
+         selectedArea.setMap(null);
+         google.maps.event.clearInstanceListeners(selectedArea);
+      }
+      selectedArea = null;
+   });
+  
+    google.maps.event.addListener(drawingManager, 'circlecomplete', function( circle ) {
+      selectedArea = circle;
+      selectedAreaArray.push(circle);
+      console.log(selectedAreaArray.length);
+      google.maps.event.addListener(circle, 'center_changed', listSelected);
+      google.maps.event.addListener(circle, 'radius_changed', listSelected);
+      listSelected();
+      toggleSelector();
+      distance = getDistance(circle);
+      startMission();
+   });
+   
+   $('#map-controls').children().button().click(toggleSelector);    
+	
+	
+	flightPlanCoordinates = [
+    new google.maps.LatLng(loc.coords.latitude+0.000200, loc.coords.longitude)];
+	
+	exit();
+	
+	}
+	
+function mercatorInterpolate(map, latLngFrom, latLngTo, fraction) {
+
+    var projection = map.getProjection();
+    var pointFrom = projection.fromLatLngToPoint(latLngFrom);
+    var pointTo = projection.fromLatLngToPoint(latLngTo);
+
+    if (Math.abs(pointTo.x - pointFrom.x) > 128) {
+        if (pointTo.x > pointFrom.x)
+            pointTo.x -= 256;
+        else
+            pointTo.x += 256;
+    }
+
+    var x = pointFrom.x + (pointTo.x - pointFrom.x) * fraction;
+    var y = pointFrom.y + (pointTo.y - pointFrom.y) * fraction;
+    var pointBetween = new google.maps.Point(x, y);
+
+    var latLngBetween = projection.fromPointToLatLng(pointBetween);
+    return latLngBetween;
+}
+
+function animateCircle() {
+   
+   marker = new google.maps.Marker({
+	    	position: new google.maps.LatLng(loc.coords.latitude,loc.coords.longitude),
+	    	map: map,
+	    	icon: './../images/quad.png'
+	    });
+   
+   var m = 0; 
+   for(var j = 0; j < dlat.length ; j++ ){
+        for (var i = 0; i <= 100; i++) {
+        
+        	if(j == 0){
+            var intermediatelatlng = mercatorInterpolate(map, new google.maps.LatLng(loc.coords.latitude,loc.coords.longitude), new google.maps.LatLng(dlat[j],dlng[j]), i / 100);
+            
+            }
+            else{
+            
+            var intermediatelatlng = mercatorInterpolate(map, new google.maps.LatLng(dlat[j-1],dlng[j-1]), new google.maps.LatLng(dlat[j],dlng[j]), i / 100);
+  
+            }
+            arrayOflatLng.push(intermediatelatlng);
+            }
+            
+            
+   		var interval = window.setInterval(function () {
+   		try {
+		marker.setPosition(new google.maps.LatLng(arrayOflatLng[m].k,arrayOflatLng[m].D));
+		
+	}
+	catch(err) {
+ 	   console.log( err.messag);
+ 	   clearInterval(interval);
+		}
+		
+		if(!pictureArr[0]){
+		listSelected();
+		}
+				
+		if(m >= arrayOflatLng.length){
+			clearInterval(interval);
+			marker.setPosition(new google.maps.LatLng(dlat[dlat.length - 1],dlng[dlng.length - 1]));
+			arrayOflatLng = [];
+			clearInterval(interval);
+			m=0;
+			}
+
+		m++;
+    }, 100);
+    
+
+        }
+    
+}
+
+function clearAllIntervals() {
+    for (var i = 1; i < 99999; i++)
+        window.clearInterval(i);
+}	
+
+function listSelected () {
+
+	if(selectedArea){
+	
+	for(var i = 0; i < selectedAreaArray.length; i++){
+	if(selectedAreaArray[i]){
+	
+   	   var r = selectedAreaArray[i].getRadius(),
+       c = selectedAreaArray[i].getCenter();
+       
+		       
+		      var d;
+		      if ( ( (d = google.maps.geometry.spherical.computeDistanceBetween( marker.position, c )) <= r ) ){
+		         //console.log( "Quad location : " + ' ('+(Math.round(d/100)/10)+' km)');
+		         selectedAreaArray[i] = null;
+				 takePicture();
+				 console.log('takePicture');
+				 
+		 		}
+		 	}
+		}
+   }
+}
+
+function getDistance(area){
+
+console.log('In Get Distance'); 
+
+	   if(area){
+   	   var r = area.getRadius(),
+       c = area.getCenter();
+       }else 
+       	return distance;
+
+       
+      var d = google.maps.geometry.spherical.computeDistanceBetween( marker.position, c );
+      console.log(Math.round(d/100)/10);
+      return (Math.round(d/100)/10);
+      
+}
+	
+
+function gstation(){
+
+		
+  var sensorReading = $.get('/data');
+ 
+}
+
+	function exit(){
+
+            $('#box1').animate({'top':'-1000px'},300,function(){
+            	$('#overlay1').fadeOut('slow');
+            	// $('.notify-status').css('background-color', 'white');
+            });
+            
+           }
+     function exitMission(){
+ 
+             $('.leftContainer').animate({'left':'-308px'},300,function(){
+            	 $('#overlay1').fadeOut('slow');
+            	 // $('.notify-status').css('background-color', 'white');
+             });
+             
+             document.getElementById("info").innerHTML = "";
+             
+            }
+ 
+            
+     function startMission(){
+    	
+    		 info = "<button style='font-size: 0.9em;width:100%;color: white; margin: 0; padding: 0; outline: 0; text-decoration: none; box-sizing: border-box !important; -webkit-box-sizing: border-box !important; -moz-box-sizing: border-box !important; -ms-box-sizing: border-box !important;' onclick='exitMission()' id='w8-grey' name='w8-grey' class='w8-button grey' >Exit</button><h4 style='font-size: 0.9em;'>Destination Latitude: " + lastLat + ", <br /> Destination Longitude: " + lastLng + " <br />Distance: " + distance + " km </br></h3><img class='icon' onclick='addMark()' src='./../images/mark.png' width='40px' height='40px' /><img class='icon' onclick='addPath()' src='./../images/path.png' width='60px' height='60px' />";
+     		
+    		 document.getElementById("info").innerHTML = info;
+     
+     }
+    
+    function addPath(){
+    
+  if (line){
+  line.setMap(null);
+  }
+		  
+  		  
+		  line = new google.maps.Polyline({
+		    path: flightPlanCoordinates,
+		    map: map
+		  });
+
+  	line.setMap(map);
+	   
+    }
+    
+    function addMark(){
+    
+    $('#image').css({visibility: "visible"})
+    
+    if(!start){
+    
+    start = document.createElement('img');
+    start.setAttribute("src", "./../images/Start.png");
+    start.setAttribute("onClick", "animateCircle()");
+    start.id = 'start'
+   	document.getElementById('st').appendChild(start);
+    }
+    
+     if(lmarker[0] && isStarted){	
+   	 for(var i = 0; i < lmarker.length;i++)
+   	 lmarker[0].setMap(null);
+   	 
+   	 isStarted = false;
+   	 }
+	 
+	 if(marker)	
+   	 marker.setMap(null);
+   	 
+   	 
+   	dlat.push( lastLat);
+    dlng.push( lastLng);
+	 destinationLocation = new google.maps.LatLng(dlat[dlat.length-1], dlng[dlng.length-1]);
+
+	 lmarker.push( new google.maps.Marker({
+	    	position: destinationLocation,
+	    	map: map,
+	    }));
+	 
+	 dmarker = new google.maps.Marker({
+	    	position: currentLocation,
+	    	map: map,
+	    	icon: './../images/ping.png'
+	    });
+	    
+	flightPlanCoordinates.push(destinationLocation);
+	  
+    }
+           
+         function addQuad(num){
+    		
+	$('#map-canvas').animate({'left':'2500px'},300,function(){
+            	
+            	// $('.notify-status').css('background-color', 'white');
+           });
+		
+			
+    }
+    
+    function switchQuad(num){
+
+       
+			$('#map-canvas').animate({'left':'0px'},300,function(){
+            	
+            	// $('.notify-status').css('background-color', 'white');
+           });
+					
+    }
+    
+    function removeQuad(num){
+    	
+    }
+
+	function initialise(location)
+	{
+	loc = location;
+	
+	document.write(location);	
+
+	}
+	
+	function test(data){
+	document.write(data);
+	}
+	
+	
+	$(document).ready(function()
+	{
+
+	if (navigator.geolocation) {
+		navigator.geolocation.getCurrentPosition(positionSuccess);
+		console.log("good");
+	} else {
+		console.log("bad");
+		//$('.map').text('Your browser is out of fashion, there\'s no geolocation!');
+	}
+	
+	//gstation();
+		
+	});
+
+    function takePicture(){
+    
+	    $.get('/sendData', function($data){
+	    
+	    var elem = document.getElementById( 'methaphore' );
+	    var img = document.createElement('svg');
+	    img.id = 'svg' + imgCount;
+	    
+		var temp = elem.innerHTML;
+		var spinner = '<div id="'+imgCount+'" class="icon" style="float:right;margin-right:10px"><div class="spinner"><svg width="100px" height="100px" viewBox="-26 -26 100 100" class="spinner_svg"><defs></defs><g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"> <g id="Group" transform="translate(2.000000, 2.000000)" stroke="#FFFFFF"><circle id="Oval-1" stroke-width="4" cx="22.5" cy="22.5" r="22.5"></circle><circle id="Oval-2" cx="22.5" cy="22.5" r="22.5" stroke-width="1.5"></circle><circle id="Oval-3" cx="22.5" cy="22.5" r="22.5" stroke-width="1.5"></circle><circle id="Oval-4" cx="22.5" cy="22.5" r="22.5" stroke-width="1.5"></circle></g></g></svg></div></div>';
+		
+		elem.innerHTML += spinner;
+		
+		imgArray.push(imgCount);
+		
+		document.getElementById("addedImg").appendChild(img);
+	    var imgSent = setInterval(function(){ document.getElementById(imgArray[0]).parentNode.removeChild(document.getElementById(imgArray[0])); imgArray.shift(); img.innerHTML = '<img alt="Embedded Image" width="50%" src="'+$data[1 +( showImage % 4)]+'" />';clearInterval(imgSent);showImage++; $.get('/stop', function($data){});}, 9000); 
+		
+		imgCount++;
+		
+	    });
+    }
+
+
+	
+
+</script>
+
+</body>
+</html>

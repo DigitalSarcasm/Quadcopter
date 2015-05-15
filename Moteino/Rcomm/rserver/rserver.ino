@@ -8,7 +8,7 @@
 #define PUBLICID 0
 #define NETID 100
 #define FREQ RF69_915MHZ
-#define SERIALBAUD 115200
+#define SERIALBAUD 9600
 
 #define ANT_LED 9
 #define FLASH_LED 8
@@ -146,48 +146,6 @@ void query(){
 	}
 }
 
-//handles data reception phase
-//currently only receives one packet at a time from a client, should implement the multiple packet method
-/*void reception(){
-//	//cycle through requests while there are requests in the output queue and there is space in the input queue for data
-//	for(int i=0; (i<outq.length() && !inq.full()); i++){
-//		Packet* p = outq.peek();
-//		Timer receptimer;
-//		//bool replied = false;
-//		byte replied = 0;
-//		
-//		if(p->getData()[1] > (inq.maxLength() - inq.length()))	//check there is space for the number of request transmissions, if not, trim the number
-//			p->getData()[1] = (inq.maxLength() - inq.length())	//if there isn't, trim the number of allowed packets
-//		
-//		for(int j=0; (j<RECEPRETRY && replied != p->getData()[1]); j++){	//retry request if the number of packets have not been sent. This loop runs once if all the packets have been received else, it tries RECEPRETRY time to receive the remaining packets
-//			//send back TXrequest to client
-//			byte left = p->getData()[1] - replied;	//check for any sent packets (if this is a retry)
-//			radio.send(p->getData()[0],p->getPacket(), p->plength());
-//			receptimer.start();
-//			
-//			//allow all packets to be sent (by multiplying 1 packet recept time * # of packets remaining)
-//			while(receptimer.getTime()  < (RECEPTIMEOUT * left) && replied != p->getData()[1]){	//wait all replies reply
-//			//if received, add data packet to input queue
-//				if(radio.receiveDone()){
-//					Packet* p = inq.queueDummy();
-//					p->setOverhead((byte)radio.DATA[0]);
-//					p->setData((byte*)radio.DATA+1, (byte)radio.DATALEN-1);
-//					
-//					if(radio.ACKRequested())
-//						radio.sendACK();
-//					
-//					replied++;
-//					//outq.dequeue();	//remove txrequest from the outq
-//				}
-//			}
-//		}
-//		//if all the packets were not received, rollover the packet
-//		if(replied < p->getData()[1]){
-//			outq.rollover();	//rollover the txrequest. 
-//		}
-//	}
-}*/
-
 //sends the request and wait for the packets to be sent. The packets use packet numbers in their meta to keep track of which is being received
 //At this point, the output is full of requests
 //the number of packets that can be received is based off the allowed max as well as the space in the input queue
@@ -273,7 +231,7 @@ void processing(){
 				p->setMeta(0);
 				p->getData()[0] = clist.getClient(0);	//set client id
 				for(int i=1; i<30; i++)
-					p->getData()[i] = rand() % 250;
+					p->getData()[i] = rand() % 256;
 				p->setLength(30);
 			}
 		}

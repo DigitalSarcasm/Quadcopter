@@ -9,16 +9,19 @@
 Timer::Timer(){
 	startTime = 0;
 	stopTime = 0;
+	run = false;
 }
 
 void Timer::start(){
 	startTime = millis();
 	stopTime = 0;
+	run = true;
 }
 
 unsigned long Timer::stop(){
 	stopTime = millis();
 	return (stopTime - startTime);
+	run = false;
 }
 
 unsigned long Timer::getTime(){
@@ -28,7 +31,9 @@ unsigned long Timer::getTime(){
 		return stopTime - startTime;
 }
 
-
+boolean Timer::running(){
+	return run;
+}
 
 //////////////////////Packet Object
 
@@ -122,6 +127,18 @@ byte Packet::getData(byte* buffer, const byte& size){
 }
 
 //Sets the data array in packet, sets the packet size as well
+byte Packet::setPacket(byte* cdata, const byte& size){
+	if(size > PACKETSIZE)
+		return 0;
+	
+	for(int i=0; i<size; i++)
+		this->data[i] = cdata[i];
+	this->dataLength = size;
+	return 1;
+}
+
+
+//Sets the data array in packet, sets the packet size as well
 byte Packet::setData(byte* cdata, const byte& size){
 	if(size > PACKETSIZE-1)
 		return 0;
@@ -196,6 +213,16 @@ byte Packet::getPriority(){
 //get priority of packet
 void Packet::setPriority(const byte& priority){
 	this->priority = priority;
+}
+
+//pads the packet with 0 values up to PACKETSIZE
+void Packet::pad(){
+	if(dataLength < PACKETSIZE){
+		for(int i=dataLength; i<PACKETSIZE; i++){
+			data[i] = 0;
+		}
+		dataLength = PACKETSIZE;
+	}
 }
 
 //Makes overhead byte from type and meta bytes. Uses bit masking and adding
