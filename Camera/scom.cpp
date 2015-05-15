@@ -36,12 +36,24 @@ int main(){
 	
 	p.pad();
 	
-	for(int i=0; i<p.plength(); i++)
-		cout << (int)p.getPacket()[i] << " ";
+//	for(int i=0; i<p.plength(); i++)
+//		cout << (int)p.getPacket()[i] << " ";
 	
-	cout << endl << (int)p.plength() <<" done \n";
+	//cout << endl << (int)p.plength() <<" done \n";
 	
-//	cout << getBase64Img("Donate.jpg");
+	cout << "Starting Radio Client \n";
+	
+	string simg = getBase64Img("Donate.jpg");
+	
+	int place = 0;
+	bool end = false;
+	bool sent = false;
+	
+	char o[61];
+	for(int i=0; i<60; i++)
+		o[i] = i;
+	o[60] = '?';
+	//cout << o << endl;
 	
 	while(1){
 //		tim.start();
@@ -49,19 +61,39 @@ int main(){
 		poll(fds, 1, 100);
 		if(fds[0].revents & POLLIN){
 			int x = serialGetchar(fd);
+			char dat[61];
 			if(x == 1){
+				if(place < (simg.length()/25)){
+					simg.copy(dat+1, 60, place);
+					place += 59;
+					dat[0] = 64;
+					dat[60] = '?';
+//					for(int i=0; i< 60; i++)
+//						dat[i] = 65;
+//					dat[60] = '?';
+					write(fd, dat, 61);
+					cout << "sending Packet: " << dat << endl;
+				}
+				else{
+					if(!end){
+						for(int i=0; i<61; i++)
+							dat[i] = 255;
+						end = true;
+						cout << dat << endl;
+					}
+				}
+//				write(fd, p.getPacket(), (int)p.plength());
 				//for(int i=0; i< p.plength(); i++){
 //					serialPutchar(fd, p.getPacket()[i]);
-					write(fd, p.getPacket(), (int)p.plength());
 				//}
 				serialFlush(fd);
 			}
-			cout << "SENT ";
+//			cout << "SENT ";
 			cout.flush();
 		}
-		cout << "here";
-		cout << serialDataAvail(fd) << " ";
-		cout.flush();
+//		cout << "here";
+//		cout << serialDataAvail(fd) << " ";
+//		cout.flush();
 //		usleep(500000);
 //		sleep(1);
 //		delay(100);
@@ -80,6 +112,16 @@ int main(){
 //			cout << x;
 //			cout.flush();
 //			serialPutchar(fd, 45);
+//		}
+//	}
+
+//	while(1){
+//		char dat[61];
+//		if(place < simg.length()){
+//			simg.copy(dat, 61, place);
+//			place += 61;
+//			cout << dat << endl;
+//			cout.flush();
 //		}
 //	}
 	
